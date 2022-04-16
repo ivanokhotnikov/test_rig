@@ -7,6 +7,7 @@ from utils.config import FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES, PR
 
 st.set_page_config(layout='wide')
 
+
 def main():
     st.header('Anomaly Detection in the unit test data')
     uploaded_file = st.file_uploader('Upload raw data file', type=['csv'])
@@ -28,22 +29,24 @@ def main():
                                 show=False))
         with col2:
             algorithm = st.radio(
-                'Select algorithm', (None, 'IsolationForest', 'LocalOutlierFactor',
-                                    'ConvolutionalAutoencoder'),
+                'Select algorithm',
+                (None, 'IsolationForest', 'LocalOutlierFactor',
+                 'ConvolutionalAutoencoder'),
                 help=
                 'References on isolation forest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html, local outlier factor: https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.LocalOutlierFactor.html, convolutional autoencoder: https://keras.io/examples/timeseries/timeseries_anomaly_detection/',
                 index=0)
             if algorithm is not None:
                 for feature in ENGINEERED_FEATURES + PRESSURE_TEMPERATURE_FEATURES:
                     detector = ModelReader.read_model(f'{algorithm}_{feature}',
-                                                    task='anomaly_detection')
+                                                      task='anomaly_detection')
                     if algorithm == 'ConvolutionalAutoencoder':
                         scaler = ModelReader.read_model(
                             f'{algorithm}_{feature}_scaler',
                             task='anomaly_detection')
-                        scaled_data = scaler.transform(df[feature].values.reshape(
-                            -1, 1))
-                        x = create_sequences(scaled_data, time_steps=TIME_STEPS)
+                        scaled_data = scaler.transform(
+                            df[feature].values.reshape(-1, 1))
+                        x = create_sequences(scaled_data,
+                                             time_steps=TIME_STEPS)
                         pred = detector.predict(x)
                         threshold = ModelReader.read_model(
                             f'{algorithm}_{feature}_threshold',
@@ -53,13 +56,15 @@ def main():
                         test_mae_loss = test_mae_loss.reshape((-1))
                         anomalies = test_mae_loss > threshold
                         anomalous_data_indices = []
-                        for data_idx in range(TIME_STEPS - 1,
-                                            len(scaled_data) - TIME_STEPS + 1):
+                        for data_idx in range(
+                                TIME_STEPS - 1,
+                                len(scaled_data) - TIME_STEPS + 1):
                             if np.all(anomalies[data_idx - TIME_STEPS +
                                                 1:data_idx]):
                                 anomalous_data_indices.append(data_idx)
                         df.loc[:, f'ANOMALY_{feature}'] = 1
-                        df.loc[anomalous_data_indices, f'ANOMALY_{feature}'] = -1
+                        df.loc[anomalous_data_indices,
+                               f'ANOMALY_{feature}'] = -1
                     else:
                         df[f'ANOMALY_{feature}'] = detector.predict(
                             df[feature].values.reshape(-1, 1))
@@ -76,6 +81,7 @@ def main():
                             f'No anomalies found in unit {df.iloc[0]["UNIT"]} for {feature} with {algorithm}'
                         )
                         continue
+
 
 if __name__ == '__main__':
     main()
