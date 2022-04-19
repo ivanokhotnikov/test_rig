@@ -12,17 +12,20 @@ from utils.config import (DATA_PATH, FEATURES_NO_TIME, FORECAST_FEATURES,
                           RAW_FORECAST_FEATURES, TIME_FEATURES, TIME_STEPS)
 
 
+@st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def get_ma_data():
-    df = pd.read_csv(os.path.join(LOCAL_DATA_PATH, 'forecast_ma_data.csv'))
-    df['TOTAL SECONDS'] = (pd.to_timedelta(range(
-        len(df)), unit='s').total_seconds()).astype(np.uint64)
-    df['TIME'] = pd.to_datetime(range(len(df)),
-                                unit='s',
-                                origin='23-02-2021 00:00:00')
-    df = df.apply(pd.to_numeric, errors='coerce', downcast='float')
+    df = pd.read_csv(os.path.join(LOCAL_DATA_PATH, 'forecast_ma_data.csv'),
+                     dtype=np.float32)
+    # df['TOTAL SECONDS'] = (pd.to_timedelta(range(
+    #     len(df)), unit='s').total_seconds()).astype(np.uint64)
+    # df['TIME'] = pd.to_datetime(range(len(df)),
+    #                             unit='s',
+    #                             origin='23-02-2021 00:00:00')
+    # df = df.apply(pd.to_numeric, errors='coerce', downcast='float')
     return df
 
 
+@st.cache(allow_output_mutation=True, suppress_st_warning=True)
 def get_processed_data(raw=False,
                        local=True,
                        features_to_read=RAW_FORECAST_FEATURES,
@@ -114,7 +117,8 @@ class DataReader:
                 try:
                     unit = np.uint8(name_list[0][-3:].lstrip('0D'))
                 except ValueError:
-                    unit = np.uint8(name_list[0].split('_')[0][-3:].lstrip('0D'))
+                    unit = np.uint8(
+                        name_list[0].split('_')[0][-3:].lstrip('0D'))
                 units.append(unit)
                 current_df['ARMANI'] = 1 if name_list[0][3] == '2' else 0
                 current_df['ARMANI'] = current_df['ARMANI'].astype(np.uint8)
@@ -124,14 +128,14 @@ class DataReader:
                 current_df['TIME'] = pd.to_datetime(current_df['TIME'],
                                                     errors='coerce').dt.time
                 current_df[' DATE'] = pd.to_datetime(current_df[' DATE'],
-                                                    errors='coerce')
+                                                     errors='coerce')
                 final_df = pd.concat((final_df, current_df), ignore_index=True)
             del current_df
             gc.collect()
         try:
             final_df.sort_values(by=[' DATE', 'TIME'],
-                                    inplace=True,
-                                    ignore_index=True)
+                                 inplace=True,
+                                 ignore_index=True)
         except:
             print('Can\'t sort dataframe')
         print('Reading done!')
