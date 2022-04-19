@@ -3,8 +3,7 @@
 .devcontainer
 .vscode
 venv/*
-Dockerfile
-.dockerignore
+models/*
 app.yaml
 Makefile
 README.md
