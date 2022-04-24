@@ -1,121 +1,127 @@
+import os
+
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from colorama import Fore
-from keras.layers import LSTM, Dense
-from keras.models import Sequential
-from sklearn.model_selection import TimeSeriesSplit
+import plotly.graph_objects as go
+from joblib import dump, load
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from tensorflow import keras
 
-from utils.config import FEATURES_FOR_FORECASTING
-from utils.readers import get_preprocessed_data
+from utils.config import (EARLY_STOPPING, FORECAST_FEATURES, MODELS_PATH,
+                          TIME_STEPS, VERBOSITY)
+from utils.readers import DataReader, Preprocessor, ModelReader
 
 
-def create_dataset(dataset, look_back=1):
-    X, Y = [], []
-    for i in range(look_back, len(dataset)):
-        a = dataset[i - look_back:i, 0]
-        X.append(a)
-        Y.append(dataset[i, 0])
-    return np.array(X), np.array(Y)
+def main():
+    df = DataReader.get_processed_data(raw=False,
+                                       features_to_read=FORECAST_FEATURES)
+    trained_forecasters = []
+    for feature in FORECAST_FEATURES:
+        model = f'RNN_{feature}'
+        train_data, test_data = train_test_split(df[feature],
+                                                 train_size=0.8,
+                                                 shuffle=False)
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaled_train = scaler.fit_transform(train_data.values.reshape(-1, 1))
+        dump(scaler, os.path.join(MODELS_PATH, f'{model}_scaler.joblib'))
+        scaled_test = scaler.transform(test_data.values.reshape(-1, 1))
+        x_train, y_train = Preprocessor.create_sequences(scaled_train,
+                                                         lookback=TIME_STEPS,
+                                                         inference=False)
+        x_test, y_test = Preprocessor.create_sequences(scaled_test,
+                                                       lookback=TIME_STEPS,
+                                                       inference=False)
+
+        # reshape input to be [samples, time steps, features]
+        # x_train = np.reshape(x_train, (x_train.shape[0], TIME_STEPS, 1))
+        # x_test = np.reshape(x_test, (x_test.shape[0], TIME_STEPS, 1))
+
+        forecaster = keras.models.Sequential()
+        forecaster.add(
+            keras.layers.LSTM(5,
+                              input_shape=(x_train.shape[1], x_train.shape[2]),
+                              return_sequences=False))
+        # forecaster.add(keras.layers.LSTM(5, return_sequences=False))
+        forecaster.add(keras.layers.Dense(1))
+        forecaster.summary()
+
+        forecaster.compile(
+            loss=keras.losses.mean_squared_error,
+            optimizer=keras.optimizers.RMSprop(learning_rate=0.1),
+        )
+        history = forecaster.fit(
+            x_train,
+            y_train,
+            epochs=200,
+            batch_size=256,
+            validation_split=0.2,
+            verbose=VERBOSITY,
+            callbacks=[
+                keras.callbacks.EarlyStopping(patience=EARLY_STOPPING,
+                                              monitor='val_loss',
+                                              mode='min',
+                                              verbose=VERBOSITY,
+                                              restore_best_weights=True),
+                keras.callbacks.ReduceLROnPlateau(monitor='val_loss',
+                                                  factor=0.75,
+                                                  patience=EARLY_STOPPING // 2,
+                                                  verbose=VERBOSITY,
+                                                  mode='min')
+            ])
+        trained_forecasters.append(forecaster)
+        forecaster.save(os.path.join(MODELS_PATH, f'{model}.h5'))
+
+        fig = go.Figure(go.Scatter(y=history.history['loss'], name='Training'))
+        fig.add_scatter(y=history.history['val_loss'], name='Validation')
+        fig.update_layout(
+            xaxis=dict(title='Epochs'),
+            yaxis=dict(title=f'{feature} loss'),
+            template='none',
+            legend=dict(orientation='h',
+                        yanchor='bottom',
+                        xanchor='right',
+                        x=1,
+                        y=1.01),
+        )
+        fig.show()
+
+        test_predict = forecaster.predict(x_test)
+        test_predict = scaler.inverse_transform(test_predict)
+
+        y_train = scaler.inverse_transform(y_train.reshape(-1, 1))
+        y_test = scaler.inverse_transform(y_test.reshape(-1, 1))
+
+        score_rmse = mean_squared_error(y_test, test_predict, squared=False)
+        score_mae = mean_absolute_error(y_test, test_predict)
+
+        x_train_ticks = list(train_data.index)
+        x_test_ticks = list(test_data.index)
+        fig = go.Figure(
+            go.Scatter(x=x_train_ticks,
+                       y=y_train.reshape(-1),
+                       name='Train',
+                       line=dict(color='lightgray', width=1)))
+        fig.add_scatter(x=x_test_ticks,
+                        y=test_predict.reshape(-1),
+                        name='Prediction',
+                        line=dict(color='indianred', width=1))
+        fig.add_scatter(x=x_test_ticks,
+                        y=y_test.reshape(-1),
+                        name='Ground truth',
+                        line=dict(color='steelblue', width=1))
+        fig.update_layout(
+            template='none',
+            yaxis_title=feature,
+            title=
+            f'{feature} forecast MAE: {score_mae:.2f}, RMSE: {score_rmse:.2f}',
+            legend=dict(orientation='h',
+                        yanchor='bottom',
+                        xanchor='right',
+                        x=1,
+                        y=1.01))
+        fig.show()
 
 
 if __name__ == '__main__':
-    df = get_preprocessed_data(raw=False,
-                               features_to_read=FEATURES_FOR_FORECASTING)
-    N_SPLITS = 3
-    X = df['DURATION']
-    y = df['Vibration 1']
-    folds = TimeSeriesSplit(n_splits=N_SPLITS)
-    train_size = int(0.85 * len(df))
-    test_size = len(df) - train_size
-    univariate_df = df[['DURATION', 'Vibration 1']].copy()
-    univariate_df.columns = ['ds', 'y']
-    train = univariate_df.iloc[:train_size, :]
-    x_train = pd.DataFrame(univariate_df.iloc[:train_size, 0])
-    y_train = pd.DataFrame(univariate_df.iloc[:train_size, 1])
-    x_valid = pd.DataFrame(univariate_df.iloc[train_size:, 0])
-    y_valid = pd.DataFrame(univariate_df.iloc[train_size:, 1])
-    data = univariate_df.filter(['y'])
-    #Convert the dataframe to a numpy array
-    dataset = data.values
-    scaler = MinMaxScaler(feature_range=(-1, 0))
-    scaled_data = scaler.fit_transform(dataset)
-    scaled_data[:10]
-    # Defines the rolling window
-    look_back = 120
-    # Split into train and test sets
-    train, test = scaled_data[:train_size -
-                              look_back, :], scaled_data[train_size -
-                                                         look_back:, :]
-
-    x_train, y_train = create_dataset(train, look_back)
-    x_test, y_test = create_dataset(test, look_back)
-
-    # reshape input to be [samples, time steps, features]
-    x_train = np.reshape(x_train, (x_train.shape[0], 1, x_train.shape[1]))
-    x_test = np.reshape(x_test, (x_test.shape[0], 1, x_test.shape[1]))
-
-    print(len(x_train), len(x_test))
-
-    model = Sequential()
-    model.add(
-        LSTM(128,
-             return_sequences=True,
-             input_shape=(x_train.shape[1], x_train.shape[2])))
-    model.add(LSTM(64, return_sequences=False))
-    model.add(Dense(25))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(x_train,
-              y_train,
-              batch_size=1,
-              epochs=5,
-              validation_data=(x_test, y_test))
-    model.summary()
-
-    # Lets predict with the model
-    train_predict = model.predict(x_train)
-    test_predict = model.predict(x_test)
-
-    # invert predictions
-    train_predict = scaler.inverse_transform(train_predict)
-    y_train = scaler.inverse_transform([y_train])
-
-    test_predict = scaler.inverse_transform(test_predict)
-    y_test = scaler.inverse_transform(y_test)
-
-    # Get the root mean squared error (RMSE) and MAE
-    score_rmse = np.sqrt(mean_squared_error(y_test[0], test_predict[:, 0]))
-    score_mae = mean_absolute_error(y_test[0], test_predict[:, 0])
-    print(Fore.GREEN + 'RMSE: {}'.format(score_rmse))
-
-    x_train_ticks = univariate_df.head(train_size)['ds']
-    y_train = univariate_df.head(train_size)['y']
-    x_test_ticks = univariate_df.tail(test_size)['ds']
-
-    # Plot the forecast
-    f, ax = plt.subplots(1)
-    f.set_figheight(6)
-    f.set_figwidth(15)
-
-    sns.lineplot(x=x_train_ticks, y=y_train, ax=ax, label='Train Set')
-    sns.lineplot(x=x_test_ticks,
-                 y=test_predict[:, 0],
-                 ax=ax,
-                 color='green',
-                 label='Prediction')
-    sns.lineplot(x=x_test_ticks,
-                 y=y_test[0],
-                 ax=ax,
-                 color='orange',
-                 label='Ground truth')
-
-    ax.set_title(f'Prediction \n MAE: {score_mae:.2f}, RMSE: {score_rmse:.2f}',
-                 fontsize=14)
-    ax.set_xlabel(xlabel='Date', fontsize=14)
-    ax.set_ylabel(ylabel='Vibration 1', fontsize=14)
-
-    plt.show()
+    main()

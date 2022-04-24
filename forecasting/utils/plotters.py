@@ -1,56 +1,126 @@
 import os
+import numpy as np
+import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .config import ENGINEERED_FEATURES, IMAGES_PATH, FEATURES_NO_TIME_AND_COMMANDS, PRESSURE_TEMPERATURE
-
-
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def plot_ma_trend(df, feature, window, show=False, ma_df=None):
-    fig = go.Figure()
-    fig.add_scatter(x=df['TIME'],
-                    y=df[feature],
-                    name='Observed',
-                    line=dict(color='lightgray', width=.25))
-    if ma_df is not None:
-        fig.add_scatter(x=df.loc[window:, 'TIME'],
-                        y=ma_df[f'MA {feature}'],
-                        name='Moving average',
-                        line=dict(color='orange', width=1.5))
-    else:
-        fig.add_scatter(x=df['TIME'],
-                        y=df[feature].rolling(window).mean(),
-                        name='Moving average',
-                        line=dict(color='orange', width=1.5))
-    fig.update_layout(yaxis_title=feature,
-                      xaxis_title='TIME',
-                      template='none',
-                      legend=dict(orientation='h',
-                                  yanchor='bottom',
-                                  xanchor='right',
-                                  x=1,
-                                  y=1.01))
-    if show:
-        fig.show()
-        return None
-    return fig
-
-
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def plot_heatmap(df, features, show=False):
-    fig = go.Figure(
-        go.Heatmap(x=features,
-                   y=features,
-                   z=df[features].cov().values,
-                   colorscale='inferno'))
-    if show:
-        fig.show()
-        return None
-    return fig
+from .config import ENGINEERED_FEATURES, IMAGES_PATH, FEATURES_NO_TIME_AND_COMMANDS, PRESSURE_TEMPERATURE, TIME_STEPS
 
 
 class Plotter:
+
+    @staticmethod
+    def plot_forecast(historical,
+                      forecast,
+                      feature,
+                      new=None,
+                      plot_ma_all=False,
+                      window=None,
+                      show=False):
+        fig = go.Figure(
+            go.Scatter(x=list(historical.index),
+                       y=historical[feature].values.reshape(-1),
+                       name='Historical',
+                       line=dict(color='lightgray', width=1)))
+        if new is not None:
+            fig.add_scatter(x=list(
+                range(historical.index[-1],
+                      historical.index[-1] + len(new) + 1)),
+                            y=new[feature].values.reshape(-1),
+                            name='New data',
+                            line=dict(color='steelblue', width=1.25))
+            fig.add_scatter(x=list(
+                range(historical.index[-1] + len(new),
+                      historical.index[-1] + len(new) + len(forecast) + 1)),
+                            y=forecast.reshape(-1),
+                            name='Forecast',
+                            line=dict(color='indianred', width=1.25))
+            if plot_ma_all and window:
+                fig.add_scatter(x=list(
+                    range(historical.index[-1] + len(new) + len(forecast) +
+                          1)),
+                                y=pd.Series(
+                                    np.concatenate(
+                                        (historical[feature].values,
+                                         new[feature].values,
+                                         forecast.reshape(-1)
+                                         ))).rolling(window).mean().values,
+                                name='Moving average trend',
+                                line=dict(color='orange', width=1.5))
+        elif new is None:
+            fig.add_scatter(x=list(
+                range(historical.index[-1],
+                      historical.index[-1] + len(forecast) + 1)),
+                            y=forecast.reshape(-1),
+                            name='Current forecast',
+                            line=dict(color='indianred', width=1.25))
+            if plot_ma_all and window:
+                fig.add_scatter(
+                    x=list(range(historical.index[-1] + len(forecast) + 1)),
+                    y=pd.Series(
+                        np.concatenate(
+                            (historical[feature].values, forecast.reshape(-1)
+                             ))).rolling(window).mean().values,
+                    name='Moving average trend',
+                    line=dict(color='orange', width=1.5))
+
+        fig.update_layout(template='none',
+                          yaxis_title=feature,
+                          title=f'{feature} forecast',
+                          legend=dict(orientation='h',
+                                      yanchor='bottom',
+                                      xanchor='right',
+                                      x=1,
+                                      y=1.01))
+        if show:
+            fig.show()
+            return None
+        return fig
+
+    @staticmethod
+    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
+    def plot_ma_trend(df, feature, window, show=False, ma_df=None):
+        fig = go.Figure()
+        fig.add_scatter(x=df['TIME'],
+                        y=df[feature],
+                        name='Observed',
+                        line=dict(color='lightgray', width=.25))
+        if ma_df is not None:
+            fig.add_scatter(x=df.loc[window:, 'TIME'],
+                            y=ma_df[f'MA {feature}'],
+                            name='Moving average',
+                            line=dict(color='orange', width=1.5))
+        else:
+            fig.add_scatter(x=df['TIME'],
+                            y=df[feature].rolling(window).mean(),
+                            name='Moving average',
+                            line=dict(color='orange', width=1.5))
+        fig.update_layout(yaxis_title=feature,
+                          xaxis_title='TIME',
+                          template='none',
+                          legend=dict(orientation='h',
+                                      yanchor='bottom',
+                                      xanchor='right',
+                                      x=1,
+                                      y=1.01))
+        if show:
+            fig.show()
+            return None
+        return fig
+
+    @staticmethod
+    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
+    def plot_heatmap(df, features, show=False):
+        fig = go.Figure(
+            go.Heatmap(x=features,
+                       y=features,
+                       z=df[features].cov().values,
+                       colorscale='inferno'))
+        if show:
+            fig.show()
+            return None
+        return fig
 
     @staticmethod
     def plot_unit_from_summary_file(unit_id='HYD000091-R1'):
@@ -102,7 +172,6 @@ class Plotter:
             if show: fig.show()
 
     @staticmethod
-    # @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def plot_unit_per_feature(df,
                               unit=89,
                               feature='M4 ANGLE',
@@ -117,7 +186,6 @@ class Plotter:
                                                show=show)
 
     @staticmethod
-    # @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def plot_unit_per_test_feature(df,
                                    unit=89,
                                    test=1,

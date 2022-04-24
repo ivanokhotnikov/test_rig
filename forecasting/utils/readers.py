@@ -12,80 +12,85 @@ from utils.config import (DATA_PATH, FEATURES_NO_TIME, FORECAST_FEATURES,
                           RAW_FORECAST_FEATURES, TIME_FEATURES, TIME_STEPS)
 
 
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def get_ma_data():
-    df = pd.read_csv(os.path.join(LOCAL_DATA_PATH, 'forecast_ma_data.csv'),
-                     dtype=np.float32)
-    # df['TOTAL SECONDS'] = (pd.to_timedelta(range(
-    #     len(df)), unit='s').total_seconds()).astype(np.uint64)
-    # df['TIME'] = pd.to_datetime(range(len(df)),
-    #                             unit='s',
-    #                             origin='23-02-2021 00:00:00')
-    # df = df.apply(pd.to_numeric, errors='coerce', downcast='float')
-    return df
-
-
-@st.cache(allow_output_mutation=True, suppress_st_warning=True)
-def get_processed_data(raw=False,
-                       local=True,
-                       features_to_read=RAW_FORECAST_FEATURES,
-                       verbose=False):
-    if local:
-        if verbose:
-            print(f'Reading processed local data from {LOCAL_DATA_PATH}\\')
-        df = pd.read_csv(os.path.join(LOCAL_DATA_PATH, 'forecast_data.csv'))
-        df[FORECAST_FEATURES] = df[FORECAST_FEATURES].apply(pd.to_numeric,
-                                                            errors='coerce',
-                                                            downcast='float')
-        if verbose:
-            print('Reading done!')
-        return df
-    if not raw:
-        if verbose:
-            print(f'Reading processed data from {DATA_PATH}\\processed\\')
-        df = pd.read_csv(os.path.join(DATA_PATH, 'processed',
-                                      'combined_timed_data.csv'),
-                         parse_dates=True,
-                         infer_datetime_format=True,
-                         dtype=dict(
-                             zip(FEATURES_NO_TIME,
-                                 [np.float32] * len(FEATURES_NO_TIME))))
-        df[['STEP', 'UNIT', 'TEST',
-            'ARMANI']] = df[['STEP', 'UNIT', 'TEST',
-                             'ARMANI']].astype(np.uint8)
-        df['TIME'] = pd.to_datetime(df['TIME'])
-        df[' DATE'] = pd.to_datetime(df[' DATE'])
-        df[FORECAST_FEATURES] = df[FORECAST_FEATURES].apply(pd.to_numeric,
-                                                            errors='coerce',
-                                                            downcast='float')
-        if verbose:
-            print('Reading done!')
-        return df
-    if verbose:
-        print(f'Reading raw data from {DATA_PATH}\\raw\\')
-    df = DataReader.read_all_raw_data(features_to_read=features_to_read)
-    df = Preprocessor.remove_step_zero(df)
-    df['TIME'] = pd.to_datetime(range(len(df)),
-                                unit='s',
-                                origin=f'{df[" DATE"].min()} 00:00:00')
-    df['DURATION'] = pd.to_timedelta(range(len(df)), unit='s')
-    df['TOTAL SECONDS'] = (pd.to_timedelta(range(
-        len(df)), unit='s').total_seconds()).astype(np.uint64)
-    df['RUNNING HOURS'] = (df['TOTAL SECONDS'] / 3600).astype(np.float64)
-    df = Preprocessor.feature_engineering(df)
-    if verbose:
-        print('Reading done!')
-    return df
-
-
-def create_sequences(values, time_steps=TIME_STEPS):
-    output = []
-    for i in range(len(values) - time_steps + 1):
-        output.append(values[i:(i + time_steps)])
-    return np.stack(output)
-
-
 class DataReader:
+
+    @classmethod
+    def get_processed_data(cls,
+                           raw=False,
+                           local=True,
+                           features_to_read=RAW_FORECAST_FEATURES,
+                           verbose=False):
+        if local:
+            if verbose:
+                print(f'Reading processed local data from {LOCAL_DATA_PATH}\\')
+            df = pd.read_csv(os.path.join(LOCAL_DATA_PATH,
+                                          'forecast_data.csv'))
+            df[FORECAST_FEATURES] = df[FORECAST_FEATURES].apply(
+                pd.to_numeric, errors='coerce', downcast='float')
+            if verbose:
+                print('Reading done!')
+            return df
+        if not raw:
+            if verbose:
+                print(f'Reading processed data from {DATA_PATH}\\processed\\')
+            df = pd.read_csv(os.path.join(DATA_PATH, 'processed',
+                                          'combined_timed_data.csv'),
+                             parse_dates=True,
+                             infer_datetime_format=True,
+                             dtype=dict(
+                                 zip(FEATURES_NO_TIME,
+                                     [np.float32] * len(FEATURES_NO_TIME))))
+            df[['STEP', 'UNIT', 'TEST',
+                'ARMANI']] = df[['STEP', 'UNIT', 'TEST',
+                                 'ARMANI']].astype(np.uint8)
+            df['TIME'] = pd.to_datetime(df['TIME'])
+            df[' DATE'] = pd.to_datetime(df[' DATE'])
+            df[FORECAST_FEATURES] = df[FORECAST_FEATURES].apply(
+                pd.to_numeric, errors='coerce', downcast='float')
+            if verbose:
+                print('Reading done!')
+            return df
+        if verbose:
+            print(f'Reading raw data from {DATA_PATH}\\raw\\')
+        df = cls.read_all_raw_data(features_to_read=features_to_read)
+        df = Preprocessor.remove_step_zero(df)
+        df['TIME'] = pd.to_datetime(range(len(df)),
+                                    unit='s',
+                                    origin=f'{df[" DATE"].min()} 00:00:00')
+        df['DURATION'] = pd.to_timedelta(range(len(df)), unit='s')
+        df['TOTAL SECONDS'] = (pd.to_timedelta(range(
+            len(df)), unit='s').total_seconds()).astype(np.uint64)
+        df['RUNNING HOURS'] = (df['TOTAL SECONDS'] / 3600).astype(np.float64)
+        df = Preprocessor.feature_engineering(df)
+        if verbose:
+            print('Reading done!')
+        return df
+
+    @staticmethod
+    def read_newcoming_data(csv_file):
+        df = pd.read_csv(csv_file,
+                         usecols=RAW_FORECAST_FEATURES,
+                         index_col=False)
+        df[FEATURES_NO_TIME] = df[FEATURES_NO_TIME].apply(pd.to_numeric,
+                                                          errors='coerce',
+                                                          downcast='float')
+        df = df.dropna(axis=0)
+        name_list = csv_file.name.split('-')
+        try:
+            unit = np.uint8(name_list[0][-3:].lstrip('0D'))
+        except ValueError:
+            unit = np.uint8(name_list[0].split('_')[0][-3:].lstrip('0D'))
+        df['UNIT'] = unit
+        df['STEP'] = df['STEP'].astype(np.uint8)
+        #TODO retesting case needs to be addressed
+        df['TEST'] = np.uint8(1)
+        return df
+
+    @staticmethod
+    def read_ma_data():
+        df = pd.read_csv(os.path.join(LOCAL_DATA_PATH, 'forecast_ma_data.csv'),
+                         dtype=np.float32)
+        return df
 
     @staticmethod
     def read_all_raw_data(features_to_read=RAW_FORECAST_FEATURES):
@@ -173,12 +178,6 @@ class DataReader:
                              zip(FEATURES_NO_TIME,
                                  [np.float32] * len(FEATURES_NO_TIME))),
                          index_col=False)
-        # df[FEATURES_NO_TIME] = df[FEATURES_NO_TIME].apply(pd.to_numeric,
-        #                                                   errors='coerce',
-        #                                                   downcast='float')
-        # df.dropna(inplace=True)
-        # df[['STEP', 'UNIT', 'TEST']] = df[['STEP', 'UNIT',
-        #                                    'TEST']].astype(np.uint8)
         print('Reading done')
         return df
 
@@ -222,32 +221,22 @@ class DataReader:
                 return pd.DataFrame(cls.read_summary_data())
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def read_newcoming_data(csv_file):
-        df = pd.read_csv(csv_file,
-                         names=RAW_FORECAST_FEATURES,
-                         index_col=False)
-        df[FEATURES_NO_TIME] = df[FEATURES_NO_TIME].apply(pd.to_numeric,
-                                                          errors='coerce',
-                                                          downcast='float')
-        df = df.dropna(axis=0)
-        name_list = csv_file.name.split('-')
-        try:
-            unit = np.uint8(name_list[0][-3:].lstrip('0D'))
-        except ValueError:
-            unit = np.uint8(name_list[0].split('_')[0][-3:].lstrip('0D'))
-        df['UNIT'] = unit
-        df['STEP'] = df['STEP'].astype(np.uint8)
-        df['TEST'] = np.uint8(1)
-        return df
-
-    @staticmethod
     def read_predictions(file):
         return pd.read_csv(os.path.join(PREDICTIONS_PATH, file),
                            index_col=False)
 
 
 class Preprocessor:
+
+    @staticmethod
+    def create_sequences(values, lookback=TIME_STEPS, inference=False):
+        X, Y = [], []
+        for i in range(lookback, len(values)):
+            X.append(values[i - lookback:i])
+            Y.append(values[i])
+        if inference:
+            return np.stack(X)
+        return np.stack(X), np.stack(Y)
 
     @staticmethod
     def remove_step_zero(df):
@@ -270,7 +259,6 @@ class Preprocessor:
         return df[(df['STEP'] >= 23) & (df['STEP'] <= 33)]
 
     @staticmethod
-    # @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def feature_engineering(df):
         df['DRIVE POWER'] = (df['M1 SPEED'] * df['M1 TORQUE'] * np.pi / 30 /
                              1e3).astype(np.float32)
@@ -296,39 +284,15 @@ class Preprocessor:
 class ModelReader:
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def read_model(model, task='anomaly_detection', extension='.joblib'):
-        if task == 'anomaly_detection':
-            if 'Autoencoder' in model:
-                if 'scaler' in model:
-                    extension = '.joblib'
-                    return load(
-                        os.path.join(MODELS_PATH, 'anomaly_detectors',
-                                     model + extension))
-                if 'threshold' in model:
-                    extension = '.txt'
-                    with open(
-                            os.path.join(MODELS_PATH, 'anomaly_detectors',
-                                         model + extension), 'r') as file:
-                        threshold = np.float16(file.read().rstrip())
-                    return threshold
-                extension = '.h5'
-                return keras.models.load_model(
-                    os.path.join(MODELS_PATH, 'anomaly_detectors',
-                                 model + extension))
-            return load(
-                os.path.join(MODELS_PATH, 'anomaly_detectors',
-                             model + extension))
-        elif task == 'decomopose':
-            return load(
-                os.path.join(MODELS_PATH, 'decomposers', model + extension))
-        elif task == 'forecast':
-            return load(
-                os.path.join(MODELS_PATH, 'forecasters', model + extension))
+    def read_model(model):
+        if 'scaler' in model:
+            return load(os.path.join(MODELS_PATH, model + '.joblib'))
+        return keras.models.load_model(os.path.join(MODELS_PATH,
+                                                    model + '.h5'))
 
 
 if __name__ == '__main__':
-    raw_data_df = get_processed_data(raw=True,
-                                     features_to_read=RAW_FORECAST_FEATURES)
-    combined_data_df = get_processed_data(
+    raw_data_df = DataReader.get_processed_data(
+        raw=True, features_to_read=RAW_FORECAST_FEATURES)
+    combined_data_df = DataReader.get_processed_data(
         raw=False, features_to_read=RAW_FORECAST_FEATURES)
