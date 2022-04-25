@@ -16,7 +16,7 @@ steps:
         "--image",
         "gcr.io/forecasting-347712/forecaster",
         "--region",
-        "europe-west2",
+        "global",
       ]
 images:
   - gcr.io/forecasting-347712/forecaster
