@@ -12,7 +12,7 @@ steps:
       [
         "run",
         "deploy",
-        "SERVICE-NAME",
+        "forecaster",
         "--image",
         "gcr.io/forecasting-347712/forecaster",
         "--region",
