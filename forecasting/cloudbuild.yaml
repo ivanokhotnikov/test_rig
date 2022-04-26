@@ -1,13 +1,13 @@
 steps:
-  # Build the container image
   - name: "gcr.io/cloud-builders/docker"
+    id: "build container image"
     args: ["build", "-t", "gcr.io/forecasting-347712/forecaster", "."]
     dir: "forecasting"
-  # Push the container image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
+    id: "push container image to container registry"
     args: ["push", "gcr.io/forecasting-347712/forecaster"]
-  # Deploy container image to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy container image to cloud run"
     entrypoint: gcloud
     args:
       [
@@ -23,12 +23,11 @@ steps:
         "--memory",
         "4Gi",
         "--timeout",
-        "5000",
+        "3600",
         "--allow-unauthenticated",
         "--platform",
-        "managed"
+        "managed",
       ]
 images:
   - gcr.io/forecasting-347712/forecaster
-timeout:
-  3000s
+timeout: 3600s
