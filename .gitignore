@@ -7,9 +7,7 @@ anomaly_detection/.vscode*
 anomaly_detection/.devcontainer*
 forecasting/models*
 forecasting/venv*
-# forecasting/data*
+forecasting/data*
 forecasting/.vscode*
 forecasting/.devcontainer*
-forecasting/Dockerfile
-*.csv
-*.xlsx
+forecasting/Dockerfile*
