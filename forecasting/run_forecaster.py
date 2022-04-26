@@ -6,7 +6,7 @@ from utils.plotters import Plotter
 
 def main():
     df = DataReader.get_processed_data(raw=False,
-                                       local=False,
+                                       local=True,
                                        features_to_read=RAW_FORECAST_FEATURES)
     if st.button('Plot heatmap of features'):
         st.plotly_chart(Plotter.plot_heatmap(df, FORECAST_FEATURES,
