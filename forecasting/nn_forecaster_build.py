@@ -14,8 +14,7 @@ from utils.readers import DataReader, Preprocessor, ModelReader
 
 
 def main():
-    df = DataReader.get_processed_data(raw=False,
-                                       features_to_read=FORECAST_FEATURES)
+    df = DataReader.get_processed_data_from_gcs(raw=False)
     trained_forecasters = []
     for feature in FORECAST_FEATURES:
         model = f'RNN_{feature}'
@@ -33,16 +32,11 @@ def main():
                                                        lookback=TIME_STEPS,
                                                        inference=False)
 
-        # reshape input to be [samples, time steps, features]
-        # x_train = np.reshape(x_train, (x_train.shape[0], TIME_STEPS, 1))
-        # x_test = np.reshape(x_test, (x_test.shape[0], TIME_STEPS, 1))
-
         forecaster = keras.models.Sequential()
         forecaster.add(
             keras.layers.LSTM(5,
                               input_shape=(x_train.shape[1], x_train.shape[2]),
                               return_sequences=False))
-        # forecaster.add(keras.layers.LSTM(5, return_sequences=False))
         forecaster.add(keras.layers.Dense(1))
         forecaster.summary()
 
@@ -74,16 +68,14 @@ def main():
 
         fig = go.Figure(go.Scatter(y=history.history['loss'], name='Training'))
         fig.add_scatter(y=history.history['val_loss'], name='Validation')
-        fig.update_layout(
-            xaxis=dict(title='Epochs'),
-            yaxis=dict(title=f'{feature} loss'),
-            template='none',
-            legend=dict(orientation='h',
-                        yanchor='bottom',
-                        xanchor='right',
-                        x=1,
-                        y=1.01),
-        )
+        fig.update_layout(xaxis=dict(title='Epochs'),
+                          yaxis=dict(title=f'{feature} loss'),
+                          template='none',
+                          legend=dict(orientation='h',
+                                      yanchor='bottom',
+                                      xanchor='right',
+                                      x=1,
+                                      y=1.01))
         fig.show()
 
         test_predict = forecaster.predict(x_test)

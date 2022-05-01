@@ -1,9 +1,14 @@
 import gc
+import io
 import os
+
+import gcsfs
+import h5py
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+from google.cloud import storage
 from joblib import load
 from tensorflow import keras
 
@@ -13,6 +18,88 @@ from utils.config import (DATA_PATH, FEATURES_NO_TIME, FORECAST_FEATURES,
 
 
 class DataReader:
+
+    @staticmethod
+    def get_processed_data_from_gcs(raw=False):
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket('rig_data')
+        if raw:
+            print(f'Reading raw data from gcs')
+            final_df = pd.DataFrame()
+            units = []
+            for blob in bucket.list_blobs(prefix='raw'):
+                data_bytes = blob.download_as_bytes()
+                try:
+                    if blob.name.endswith('.csv'):
+                        current_df = pd.read_csv(io.BytesIO(data_bytes),
+                                                 usecols=RAW_FORECAST_FEATURES,
+                                                 infer_datetime_format=True,
+                                                 index_col=False)
+                    elif blob.name.endswith('.xlsx') or blob.name.endswith(
+                            '.xls'):
+                        current_df = pd.read_excel(
+                            io.BytesIO(data_bytes),
+                            usecols=RAW_FORECAST_FEATURES,
+                            index_col=False)
+                except:
+                    print(f'Can\'t read {blob.name}')
+                    continue
+                current_df[FEATURES_NO_TIME] = current_df[
+                    FEATURES_NO_TIME].apply(pd.to_numeric,
+                                            errors='coerce',
+                                            downcast='float')
+                if len(current_df['STEP'].unique()) == 36:
+                    current_df.dropna(inplace=True)
+                    name_list = blob.name.split('-')
+                    try:
+                        unit = np.uint8(name_list[0][-3:].lstrip('0D'))
+                    except ValueError:
+                        unit = np.uint8(
+                            name_list[0].split('_')[0][-3:].lstrip('0D'))
+                    units.append(unit)
+                    current_df['ARMANI'] = 1 if name_list[0][3] == '2' else 0
+                    current_df['ARMANI'] = current_df['ARMANI'].astype(
+                        np.uint8)
+                    current_df['UNIT'] = unit
+                    current_df['TEST'] = np.uint8(units.count(unit))
+                    current_df['STEP'] = current_df['STEP'].astype(np.uint8)
+                    current_df['TIME'] = pd.to_datetime(
+                        current_df['TIME'], errors='coerce').dt.time
+                    current_df[' DATE'] = pd.to_datetime(current_df[' DATE'],
+                                                         errors='coerce')
+                    final_df = pd.concat((final_df, current_df),
+                                         ignore_index=True)
+                del current_df
+                gc.collect()
+            try:
+                final_df.sort_values(by=[' DATE', 'TIME'],
+                                     inplace=True,
+                                     ignore_index=True)
+            except:
+                print('Can\'t sort dataframe')
+            final_df = Preprocessor.remove_step_zero(final_df)
+            final_df['TIME'] = pd.to_datetime(
+                range(len(final_df)),
+                unit='s',
+                origin=f'{final_df[" DATE"].min()} 00:00:00')
+            final_df['DURATION'] = pd.to_timedelta(range(len(final_df)),
+                                                   unit='s')
+            final_df['TOTAL SECONDS'] = (pd.to_timedelta(
+                range(len(final_df)),
+                unit='s').total_seconds()).astype(np.uint64)
+            final_df['RUNNING HOURS'] = (final_df['TOTAL SECONDS'] /
+                                         3600).astype(np.float64)
+            final_df = Preprocessor.feature_engineering(final_df)
+            return final_df
+
+        else:
+            print(f'Reading processed data from gcs')
+            blob = bucket.get_blob('processed/forecast_data.csv')
+            forecast_data_bytes = blob.download_as_bytes()
+            final_df = pd.read_csv(io.BytesIO(forecast_data_bytes))
+            final_df[FORECAST_FEATURES] = final_df[FORECAST_FEATURES].apply(
+                pd.to_numeric, errors='coerce', downcast='float')
+            return final_df
 
     @classmethod
     def get_processed_data(cls,
@@ -289,6 +376,20 @@ class ModelReader:
             return load(os.path.join(MODELS_PATH, model + '.joblib'))
         return keras.models.load_model(os.path.join(MODELS_PATH,
                                                     model + '.h5'))
+
+    @staticmethod
+    def read_model_from_gcs(model):
+        print('Reading model from GCS')
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket('forecasters')
+        if 'scaler' in model:
+            blob = bucket.get_blob(model + '.joblib')
+            data_bytes = blob.download_as_bytes()
+            return load(io.BytesIO(data_bytes))
+        fs = gcsfs.GCSFileSystem()
+        with fs.open(f'gs://forecasters/{model}.h5', 'rb') as model_file:
+            model_gcs = h5py.File(model_file, 'r')
+            return keras.models.load_model(model_gcs)
 
 
 if __name__ == '__main__':

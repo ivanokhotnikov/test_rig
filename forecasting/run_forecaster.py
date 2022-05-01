@@ -5,9 +5,7 @@ from utils.plotters import Plotter
 
 
 def main():
-    df = DataReader.get_processed_data(raw=False,
-                                       local=True,
-                                       features_to_read=RAW_FORECAST_FEATURES)
+    df = DataReader.get_processed_data_from_gcs(raw=False)
     if st.button('Plot heatmap of features'):
         st.plotly_chart(Plotter.plot_heatmap(df, FORECAST_FEATURES,
                                              show=False),
@@ -24,8 +22,8 @@ def main():
         new_df = Preprocessor.feature_engineering(new_df)
         st.write('Forecast on the new data')
         for feature in FORECAST_FEATURES:
-            scaler = ModelReader.read_model(f'RNN_{feature}_scaler')
-            forecaster = ModelReader.read_model(f'RNN_{feature}')
+            scaler = ModelReader.read_model_from_gcs(f'RNN_{feature}_scaler')
+            forecaster = ModelReader.read_model_from_gcs(f'RNN_{feature}')
             scaled_new_data = scaler.transform(new_df[feature].values.reshape(
                 -1, 1))
             sequenced_scaled_new_data = Preprocessor.create_sequences(
@@ -43,8 +41,8 @@ def main():
     else:
         st.write('Current forecast')
         for feature in FORECAST_FEATURES:
-            scaler = ModelReader.read_model(f'RNN_{feature}_scaler')
-            forecaster = ModelReader.read_model(f'RNN_{feature}')
+            scaler = ModelReader.read_model_from_gcs(f'RNN_{feature}_scaler')
+            forecaster = ModelReader.read_model_from_gcs(f'RNN_{feature}')
             scaled_data = scaler.transform(
                 df.iloc[-window:][feature].values.reshape(-1, 1))
             sequenced_scaled_data = Preprocessor.create_sequences(
