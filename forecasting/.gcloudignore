@@ -4,6 +4,7 @@
 .vscode
 venv/*
 models/*
+data/*
 app.yaml
 Makefile
 README.md
