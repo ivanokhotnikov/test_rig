@@ -1,11 +1,11 @@
 steps:
   - name: "gcr.io/cloud-builders/docker"
     id: "build container image"
-    args: ["build", "-t", "gcr.io/forecasting-347712/forecaster", "."]
+    args: ["build", "-t", "gcr.io/forecasting-347712/forecasting", "."]
     dir: "forecasting"
   - name: "gcr.io/cloud-builders/docker"
     id: "push container image to container registry"
-    args: ["push", "gcr.io/forecasting-347712/forecaster"]
+    args: ["push", "gcr.io/forecasting-347712/forecasting"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "deploy container image to cloud run"
     entrypoint: gcloud
@@ -13,9 +13,9 @@ steps:
       [
         "run",
         "deploy",
-        "forecaster",
+        "forecasting",
         "--image",
-        "gcr.io/forecasting-347712/forecaster",
+        "gcr.io/forecasting-347712/forecasting",
         "--region",
         "europe-west2",
         "--cpu",
@@ -27,7 +27,9 @@ steps:
         "--allow-unauthenticated",
         "--platform",
         "managed",
+        "--port", 
+        "8080"
       ]
 images:
-  - gcr.io/forecasting-347712/forecaster
+  - gcr.io/forecasting-347712/forecasting
 timeout: 3600s
