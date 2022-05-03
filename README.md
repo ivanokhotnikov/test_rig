@@ -1,6 +1,13 @@
 # Test rig condition monitoring and anomaly detection for predictive maintenance 
 
-The repository contains the development of algorithms to monitor the test rig condition, to detect anomalies in test results, and to predict a need for maintenance in advance of a rig failure or excessive deterioration of its performance. The code also serves to provide advanced analytics of test article performance over time or during the test cycle.
+The repository contains the development of applications to detect anomalies in test results (anomaly detection), to monitor the test rig condition (forecasting), and to predict a need for maintenance in advance of a rig failure or excessive deterioration of its performance. The code also serves to provide advanced analytics of test article performance over time or during the test cycle.
+
+# Architecture
+
+Both applications (anomaly detector and forecaster) follow the same cloud architecture to build and deploy the app.
+
+![App delivery architecture](https://github.com/ivanokhotnikov/test_rig/blob/master/images/cloud_architecture.png?raw=True)
+
 
 # Scripts
 
