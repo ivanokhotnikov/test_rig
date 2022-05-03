@@ -1,8 +1,14 @@
+import io
 import os
+
+import gcsfs
+import h5py
+
 import numpy as np
 import pandas as pd
 import streamlit as st
-
+from google.cloud import storage
+from joblib import load
 from tensorflow import keras
 
 from .config import (FEATURES_FOR_ANOMALY_DETECTION, FEATURES_NO_TIME,
@@ -279,7 +285,40 @@ class ModelReader:
             return load(
                 os.path.join(MODELS_PATH, 'forecasters', model + extension))
 
+    @staticmethod
+    def read_model_from_gcs(model):
+        print('Reading model from GCS')
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket('detectors-models')
+        if 'Autoencoder' in model:
+            if 'scaler' in model:
+                blob = bucket.get_blob(model + '.joblib')
+                data_bytes = blob.download_as_bytes()
+                return load(io.BytesIO(data_bytes))
+            if 'threshold' in model:
+                blob = bucket.get_blob(model + '.txt')
+                return np.float16(blob.download_as_string())
+            fs = gcsfs.GCSFileSystem()
+            with fs.open(f'gs://detectors-models/{model}.h5', 'rb') as model_file:
+                model_gcs = h5py.File(model_file, 'r')
+                return keras.models.load_model(model_gcs)
+        blob = bucket.get_blob(model + '.joblib')
+        data_bytes = blob.download_as_bytes()
+        return load(io.BytesIO(data_bytes)) 
+
 
 if __name__ == '__main__':
-    os.chdir('anomaly_detection')
-    df = read_data(mode='raw')
+    scalers = {}
+    thresholds = {}
+    detectors = {}
+    for file in os.listdir(MODELS_PATH):
+        if 'Autoencoder' in file:
+            if 'scaler' in file:
+                scalers[file[:-14]] = ModelReader.read_model_from_gcs(file[:-14])
+            elif 'threshold' in file:
+                thresholds[file[:-14]] = ModelReader.read_model_from_gcs(
+                    file[:-14])
+            else:
+                detectors[file[:-3]] = ModelReader.read_model_from_gcs(file[:-3])
+        else:
+            detectors[file[:-7]] = ModelReader.read_model_from_gcs(file[:-7])

@@ -37,21 +37,18 @@ def main():
                 index=0)
             if algorithm is not None:
                 for feature in ENGINEERED_FEATURES + PRESSURE_TEMPERATURE_FEATURES:
-                    detector = ModelReader.read_model(f'{algorithm}_{feature}',
-                                                      task='anomaly_detection')
+                    detector = ModelReader.read_model_from_gcs(
+                        f'{algorithm}_{feature}')
                     if algorithm == 'ConvolutionalAutoencoder':
-                        scaler = ModelReader.read_model(
-                            f'{algorithm}_{feature}_scaler',
-                            task='anomaly_detection')
+                        scaler = ModelReader.read_model_from_gcs(
+                            f'{algorithm}_{feature}_scaler')
                         scaled_data = scaler.transform(
                             df[feature].values.reshape(-1, 1))
                         x = create_sequences(scaled_data,
                                              time_steps=TIME_STEPS)
                         pred = detector.predict(x)
-                        threshold = ModelReader.read_model(
-                            f'{algorithm}_{feature}_threshold',
-                            task='anomaly_detection',
-                            extension='.txt')
+                        threshold = ModelReader.read_model_from_gcs(
+                            f'{algorithm}_{feature}_threshold')
                         test_mae_loss = np.mean(np.abs(pred - x), axis=1)
                         test_mae_loss = test_mae_loss.reshape((-1))
                         anomalies = test_mae_loss > threshold
