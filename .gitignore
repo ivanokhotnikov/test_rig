@@ -11,3 +11,4 @@ forecasting/data*
 forecasting/.vscode*
 forecasting/.devcontainer*
 forecasting/Dockerfile*
+*.drawio

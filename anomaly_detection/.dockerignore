@@ -25,6 +25,9 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/.venv
+**/venv
+**/models
+**/images
 README.md
 ml_detector_build.py
 nn_detector_build.py
