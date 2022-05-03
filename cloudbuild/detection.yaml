@@ -1,0 +1,35 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    id: "build container image"
+    args: ["build", "-t", "gcr.io/anomaly-detection-344112/anomaly_detection", "."]
+    dir: "anomaly_detection"
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push container image to container registry"
+    args: ["push", "gcr.io/anomaly-detection-344112/anomaly_detection"]
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy container image to cloud run"
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "anomaly_detection",
+        "--image",
+        "gcr.io/anomaly-detection-344112/anomaly_detection",
+        "--region",
+        "europe-west2",
+        "--cpu",
+        "4",
+        "--memory",
+        "4Gi",
+        "--timeout",
+        "3600",
+        "--allow-unauthenticated",
+        "--platform",
+        "managed",
+        "--port", 
+        "8080"
+      ]
+images:
+  - gcr.io/anomaly-detection-344112/anomaly_detection
+timeout: 3600s
