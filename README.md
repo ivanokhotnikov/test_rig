@@ -2,11 +2,11 @@
 
 The repository contains the development of applications to detect anomalies in test results (anomaly detection), to monitor the test rig condition (forecasting), and to predict a need for maintenance in advance of a rig failure or excessive deterioration of its performance. The code also serves to provide advanced analytics of test article performance over time or during the test cycle.
 
-# Architecture
+# Application serving
 
-Both applications (anomaly detector and forecaster) follow the same cloud architecture to build and deploy the app.
+Both applications (anomaly detector and forecaster) follow the same cloud architecture to continuously build, deploy and serve the app.
 
-![App delivery architecture](https://github.com/ivanokhotnikov/test_rig/blob/master/images/architecture.png?raw=True)
+![App delivery architecture](https://github.com/ivanokhotnikov/test_rig/blob/master/images/serving_architecture.png?raw=True)
 
 
 # Scripts
