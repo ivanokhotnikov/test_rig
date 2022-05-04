@@ -6,7 +6,7 @@ The repository contains the development of applications to detect anomalies in t
 
 Both applications (anomaly detector and forecaster) follow the same cloud architecture to build and deploy the app.
 
-![App delivery architecture](https://github.com/ivanokhotnikov/test_rig/blob/master/images/cloud_architecture.png?raw=True)
+![App delivery architecture](https://github.com/ivanokhotnikov/test_rig/blob/master/images/architecture.png?raw=True)
 
 
 # Scripts
