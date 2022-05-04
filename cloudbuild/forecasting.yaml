@@ -28,7 +28,7 @@ steps:
         "--platform",
         "managed",
         "--port", 
-        "8080"
+        "8081"
       ]
 images:
   - gcr.io/forecasting-347712/forecasting
