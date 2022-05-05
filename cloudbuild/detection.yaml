@@ -13,7 +13,7 @@ steps:
       [
         "run",
         "deploy",
-        "anomaly_detection",
+        "anomaly-detection",
         "--image",
         "gcr.io/anomaly-detection-344112/anomaly_detection",
         "--region",
