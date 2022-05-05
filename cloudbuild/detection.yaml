@@ -1,11 +1,11 @@
 steps:
   - name: "gcr.io/cloud-builders/docker"
     id: "build container image"
-    args: ["build", "-t", "gcr.io/anomaly-detection-344112/anomaly_detection", "."]
+    args: ["build", "-t", "gcr.io/anomaly-detection-344112/anomaly-detection", "."]
     dir: "anomaly_detection"
   - name: "gcr.io/cloud-builders/docker"
     id: "push container image to container registry"
-    args: ["push", "gcr.io/anomaly-detection-344112/anomaly_detection"]
+    args: ["push", "gcr.io/anomaly-detection-344112/anomaly-detection"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "deploy container image to cloud run"
     entrypoint: gcloud
@@ -15,7 +15,7 @@ steps:
         "deploy",
         "anomaly-detection",
         "--image",
-        "gcr.io/anomaly-detection-344112/anomaly_detection",
+        "gcr.io/anomaly-detection-344112/anomaly-detection",
         "--region",
         "europe-west2",
         "--cpu",
@@ -31,5 +31,5 @@ steps:
         "8080"
       ]
 images:
-  - gcr.io/anomaly-detection-344112/anomaly_detection
+  - gcr.io/anomaly-detection-344112/anomaly-detection
 timeout: 3600s

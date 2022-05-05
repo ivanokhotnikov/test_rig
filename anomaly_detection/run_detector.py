@@ -3,7 +3,8 @@ import streamlit as st
 
 from utils.readers import DataReader, Preprocessor, ModelReader, create_sequences
 from utils.plotters import Plotter
-from utils.config import FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES, PRESSURE_TEMPERATURE_FEATURES, TIME_STEPS
+from utils.config import (FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES,
+                          PRESSURE_TEMPERATURE_FEATURES, TIME_STEPS)
 
 st.set_page_config(layout='wide')
 

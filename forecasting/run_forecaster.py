@@ -3,6 +3,8 @@ from utils.config import RAW_FORECAST_FEATURES, FORECAST_FEATURES, TIME_STEPS
 from utils.readers import DataReader, ModelReader, Preprocessor
 from utils.plotters import Plotter
 
+st.set_page_config(layout='wide')
+
 
 def main():
     df = DataReader.get_processed_data_from_gcs(raw=False)
