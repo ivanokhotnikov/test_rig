@@ -22,7 +22,7 @@ class DataReader:
     @staticmethod
     def get_processed_data_from_gcs(raw=False):
         storage_client = storage.Client()
-        bucket = storage_client.get_bucket('rig_data')
+        bucket = storage_client.get_bucket('test_rig_data')
         if raw:
             print(f'Reading raw data from gcs')
             final_df = pd.DataFrame()
