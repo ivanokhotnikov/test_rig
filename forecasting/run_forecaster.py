@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.config import RAW_FORECAST_FEATURES, FORECAST_FEATURES, TIME_STEPS
+from utils.config import FORECAST_FEATURES, TIME_STEPS
 from utils.readers import DataReader, ModelReader, Preprocessor
 from utils.plotters import Plotter
 
