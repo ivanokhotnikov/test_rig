@@ -14,7 +14,7 @@ from tensorflow import keras
 
 from utils.config import (DATA_PATH, FEATURES_NO_TIME, FORECAST_FEATURES,
                           LOCAL_DATA_PATH, MODELS_PATH, PREDICTIONS_PATH,
-                          RAW_FORECAST_FEATURES, TIME_FEATURES, TIME_STEPS)
+                          RAW_FORECAST_FEATURES, TIME_STEPS)
 
 
 class DataReader:
@@ -155,6 +155,25 @@ class DataReader:
 
     @staticmethod
     def read_newcoming_data(csv_file):
+
+        storage_client = storage.Client()
+        try:
+            bucket = storage_client.get_bucket('test_rig_data')
+        except:
+            bucket = storage_client.get_bucket('rig_data')
+        raw_folder_content = {
+            blob.name[4:]
+            for blob in list(bucket.list_blobs(prefix='raw'))
+        }
+        if csv_file.name in raw_folder_content:
+            st.write(f'{csv_file.name} in the GCS bucket {bucket.name}')
+        else:
+            st.write(f'{csv_file.name} not in the GCS bucket {bucket.name}')
+            blob = bucket.blob(f'raw/{csv_file.name}')
+            blob.upload_from_file(csv_file)
+            st.write(
+                f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
+
         df = pd.read_csv(csv_file,
                          usecols=RAW_FORECAST_FEATURES,
                          index_col=False)
@@ -381,13 +400,14 @@ class ModelReader:
     def read_model_from_gcs(model):
         print('Reading model from GCS')
         storage_client = storage.Client()
-        bucket = storage_client.get_bucket('forecasters')
+        bucket = storage_client.get_bucket('models_forecasting')
         if 'scaler' in model:
             blob = bucket.get_blob(model + '.joblib')
             data_bytes = blob.download_as_bytes()
             return load(io.BytesIO(data_bytes))
         fs = gcsfs.GCSFileSystem()
-        with fs.open(f'gs://forecasters/{model}.h5', 'rb') as model_file:
+        with fs.open(f'gs://models_forecasting/{model}.h5',
+                     'rb') as model_file:
             model_gcs = h5py.File(model_file, 'r')
             return keras.models.load_model(model_gcs)
 

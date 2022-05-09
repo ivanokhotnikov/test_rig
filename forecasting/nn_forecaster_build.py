@@ -1,8 +1,8 @@
 import os
 
-import numpy as np
 import plotly.graph_objects as go
-from joblib import dump, load
+from google.cloud import storage
+from joblib import dump
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -10,12 +10,14 @@ from tensorflow import keras
 
 from utils.config import (EARLY_STOPPING, FORECAST_FEATURES, MODELS_PATH,
                           TIME_STEPS, VERBOSITY)
-from utils.readers import DataReader, Preprocessor, ModelReader
+from utils.readers import DataReader, Preprocessor
 
 
 def main():
     df = DataReader.get_processed_data_from_gcs(raw=False)
     trained_forecasters = []
+    storage_client = storage.Client()
+    forecasting_models_bucket = storage_client.get_bucket("models_forecasting")
     for feature in FORECAST_FEATURES:
         model = f'RNN_{feature}'
         train_data, test_data = train_test_split(df[feature],
@@ -23,6 +25,8 @@ def main():
                                                  shuffle=False)
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaled_train = scaler.fit_transform(train_data.values.reshape(-1, 1))
+        blob = forecasting_models_bucket.blob(f'{model}_scaler.joblib')
+        blob.upload_from_filename(f'{model}_scaler.joblib')
         dump(scaler, os.path.join(MODELS_PATH, f'{model}_scaler.joblib'))
         scaled_test = scaler.transform(test_data.values.reshape(-1, 1))
         x_train, y_train = Preprocessor.create_sequences(scaled_train,
