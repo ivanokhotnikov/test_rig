@@ -12,8 +12,7 @@ from joblib import load
 from tensorflow import keras
 
 from .config import (FEATURES_FOR_ANOMALY_DETECTION, FEATURES_NO_TIME,
-                     FEATURES_NO_TIME_AND_COMMANDS, MODELS_PATH, DATA_PATH,
-                     PREDICTIONS_PATH, TIME_STEPS)
+                     MODELS_PATH, DATA_PATH, PREDICTIONS_PATH, TIME_STEPS)
 from joblib import load
 
 
@@ -50,13 +49,6 @@ def get_preprocessed_data(raw=False,
     df = Preprocessor.remove_step_zero(df)
     df = Preprocessor.feature_engineering(df)
     return df
-
-
-def create_sequences(values, time_steps=TIME_STEPS):
-    output = []
-    for i in range(len(values) - time_steps + 1):
-        output.append(values[i:(i + time_steps)])
-    return np.stack(output)
 
 
 class DataReader:
@@ -191,6 +183,20 @@ class DataReader:
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def read_newcoming_data(csv_file):
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket('test_rig_data')
+        raw_folder_content = {
+            blob.name[4:]
+            for blob in list(bucket.list_blobs(prefix='raw'))
+        }
+        if csv_file.name in raw_folder_content:
+            st.write(f'{csv_file.name} in the GCS bucket {bucket.name}')
+        else:
+            st.write(f'{csv_file.name} not in the GCS bucket {bucket.name}')
+            blob = bucket.blob(f'raw/{csv_file.name}')
+            blob.upload_from_file(csv_file)
+            st.write(
+                f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
         df = pd.read_csv(csv_file,
                          usecols=FEATURES_FOR_ANOMALY_DETECTION,
                          index_col=False,
@@ -216,6 +222,13 @@ class DataReader:
 
 
 class Preprocessor:
+
+    @staticmethod
+    def create_sequences(values, time_steps=TIME_STEPS):
+        output = []
+        for i in range(len(values) - time_steps + 1):
+            output.append(values[i:(i + time_steps)])
+        return np.stack(output)
 
     @staticmethod
     def remove_step_zero(df):
@@ -287,9 +300,8 @@ class ModelReader:
 
     @staticmethod
     def read_model_from_gcs(model):
-        print('Reading model from GCS')
         storage_client = storage.Client()
-        bucket = storage_client.get_bucket('detectors-models')
+        bucket = storage_client.get_bucket('models_detection')
         if 'Autoencoder' in model:
             if 'scaler' in model:
                 blob = bucket.get_blob(model + '.joblib')
@@ -299,12 +311,13 @@ class ModelReader:
                 blob = bucket.get_blob(model + '.txt')
                 return np.float16(blob.download_as_string())
             fs = gcsfs.GCSFileSystem()
-            with fs.open(f'gs://detectors-models/{model}.h5', 'rb') as model_file:
+            with fs.open(f'gs://models_detection/{model}.h5',
+                         'rb') as model_file:
                 model_gcs = h5py.File(model_file, 'r')
                 return keras.models.load_model(model_gcs)
         blob = bucket.get_blob(model + '.joblib')
         data_bytes = blob.download_as_bytes()
-        return load(io.BytesIO(data_bytes)) 
+        return load(io.BytesIO(data_bytes))
 
 
 if __name__ == '__main__':
@@ -314,11 +327,13 @@ if __name__ == '__main__':
     for file in os.listdir(MODELS_PATH):
         if 'Autoencoder' in file:
             if 'scaler' in file:
-                scalers[file[:-14]] = ModelReader.read_model_from_gcs(file[:-14])
+                scalers[file[:-14]] = ModelReader.read_model_from_gcs(
+                    file[:-14])
             elif 'threshold' in file:
                 thresholds[file[:-14]] = ModelReader.read_model_from_gcs(
                     file[:-14])
             else:
-                detectors[file[:-3]] = ModelReader.read_model_from_gcs(file[:-3])
+                detectors[file[:-3]] = ModelReader.read_model_from_gcs(
+                    file[:-3])
         else:
             detectors[file[:-7]] = ModelReader.read_model_from_gcs(file[:-7])

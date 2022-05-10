@@ -282,10 +282,7 @@ class Plotter:
                 fig.show()
                 return None
             return fig
-        else:
-            print(
-                f'No anomalies found in {feature} during {unit}-{test} test.')
-            return None
+        return None
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)

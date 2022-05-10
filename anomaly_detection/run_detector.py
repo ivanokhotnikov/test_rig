@@ -1,7 +1,7 @@
 import numpy as np
 import streamlit as st
 
-from utils.readers import DataReader, Preprocessor, ModelReader, create_sequences
+from utils.readers import DataReader, Preprocessor, ModelReader
 from utils.plotters import Plotter
 from utils.config import (FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES,
                           PRESSURE_TEMPERATURE_FEATURES, TIME_STEPS)
@@ -10,7 +10,7 @@ st.set_page_config(layout='wide')
 
 
 def main():
-    st.header('Anomaly Detection in the unit test data')
+    st.header('Anomaly detection in unit test data')
     uploaded_file = st.file_uploader('Upload raw data file', type=['csv'])
     if uploaded_file is not None:
         df = DataReader.read_newcoming_data(uploaded_file)
@@ -45,7 +45,7 @@ def main():
                             f'{algorithm}_{feature}_scaler')
                         scaled_data = scaler.transform(
                             df[feature].values.reshape(-1, 1))
-                        x = create_sequences(scaled_data,
+                        x = Preprocessor.create_sequences(scaled_data,
                                              time_steps=TIME_STEPS)
                         pred = detector.predict(x)
                         threshold = ModelReader.read_model_from_gcs(
