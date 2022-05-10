@@ -7,17 +7,18 @@ st.set_page_config(layout='wide')
 
 
 def main():
+    st.header('Forecasting test data')
     df = DataReader.get_processed_data_from_gcs(raw=False)
     if st.button('Plot heatmap of features'):
         st.plotly_chart(Plotter.plot_heatmap(df, FORECAST_FEATURES,
                                              show=False),
                         use_container_width=True)
     uploaded_file = st.file_uploader('Upload raw data file', type=['csv'])
-    window = st.number_input('Window size of moving average, seconds',
+    window = int(st.number_input('Window size of moving average, seconds',
                              value=3600,
                              min_value=1,
                              max_value=7200,
-                             step=1)
+                             step=1))
     if uploaded_file is not None:
         new_df = DataReader.read_newcoming_data(uploaded_file)
         new_df = Preprocessor.remove_step_zero(new_df)

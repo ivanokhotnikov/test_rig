@@ -66,6 +66,7 @@ class Plotter:
                     line=dict(color='orange', width=1.5))
 
         fig.update_layout(template='none',
+                          xaxis_title='Total running time, seconds',
                           yaxis_title=feature,
                           title=f'{feature} forecast',
                           legend=dict(orientation='h',

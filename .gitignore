@@ -1,6 +1,7 @@
 __pycache__*
 .vscode/*
 *data
+*.streamlit
 anomaly_detection/models*
 anomaly_detection/venv*
 anomaly_detection/.vscode*

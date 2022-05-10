@@ -4,7 +4,6 @@ import os
 
 import gcsfs
 import h5py
-
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -24,7 +23,6 @@ class DataReader:
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('test_rig_data')
         if raw:
-            print(f'Reading raw data from gcs')
             final_df = pd.DataFrame()
             units = []
             for blob in bucket.list_blobs(prefix='raw'):
@@ -91,9 +89,7 @@ class DataReader:
                                          3600).astype(np.float64)
             final_df = Preprocessor.feature_engineering(final_df)
             return final_df
-
         else:
-            print(f'Reading processed data from gcs')
             blob = bucket.get_blob('processed/forecast_data.csv')
             forecast_data_bytes = blob.download_as_bytes()
             final_df = pd.read_csv(io.BytesIO(forecast_data_bytes))
@@ -155,7 +151,6 @@ class DataReader:
 
     @staticmethod
     def read_newcoming_data(csv_file):
-
         storage_client = storage.Client()
         try:
             bucket = storage_client.get_bucket('test_rig_data')
@@ -173,7 +168,6 @@ class DataReader:
             blob.upload_from_file(csv_file)
             st.write(
                 f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
-
         df = pd.read_csv(csv_file,
                          usecols=RAW_FORECAST_FEATURES,
                          index_col=False)
@@ -398,7 +392,6 @@ class ModelReader:
 
     @staticmethod
     def read_model_from_gcs(model):
-        print('Reading model from GCS')
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('models_forecasting')
         if 'scaler' in model:
