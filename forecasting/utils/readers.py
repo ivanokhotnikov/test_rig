@@ -25,8 +25,9 @@ class DataReader:
         if raw:
             final_df = pd.DataFrame()
             units = []
-            for blob in bucket.list_blobs(prefix='raw'):
+            for blob in list(bucket.list_blobs(prefix='raw')):
                 data_bytes = blob.download_as_bytes()
+                current_df = None
                 try:
                     if blob.name.endswith('.csv'):
                         current_df = pd.read_csv(io.BytesIO(data_bytes),
@@ -42,11 +43,13 @@ class DataReader:
                 except:
                     print(f'Can\'t read {blob.name}')
                     continue
-                current_df[FEATURES_NO_TIME] = current_df[
-                    FEATURES_NO_TIME].apply(pd.to_numeric,
-                                            errors='coerce',
-                                            downcast='float')
-                if len(current_df['STEP'].unique()) == 36:
+                print(f'{blob.name} has been read')
+                if current_df is not None and len(
+                        current_df['STEP'].unique()) == 36:
+                    current_df[FEATURES_NO_TIME] = current_df[
+                        FEATURES_NO_TIME].apply(pd.to_numeric,
+                                                errors='coerce',
+                                                downcast='float')
                     current_df.dropna(inplace=True)
                     name_list = blob.name.split('-')
                     try:
