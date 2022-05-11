@@ -15,9 +15,9 @@ The directory contains the utility module `util` to pre- and post-process (see `
 
 # Links
 
-[Anomaly detector](https://anomaly-detection-cfshadewka-nw.a.run.app/)
+[Anomaly detector](https://anomaly-detector.hydreco.uk/)
 
-[Forecasting](https://forecasting-76kfdnebta-nw.a.run.app/)
+[Forecasting](https://forecasting.hydreco.uk/)
 
 # Usage
 
