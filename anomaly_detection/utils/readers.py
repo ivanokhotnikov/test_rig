@@ -181,7 +181,6 @@ class DataReader:
                 return pd.DataFrame(cls.read_summary_data())
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def read_newcoming_data(csv_file):
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('test_rig_data')
@@ -236,22 +235,18 @@ class Preprocessor:
                        axis=0).reset_index(drop=True)
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_warm_up_steps(df):
         return df[(df['STEP'] >= 1) & (df['STEP'] <= 11)]
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_break_in_steps(df):
         return df[(df['STEP'] >= 12) & (df['STEP'] <= 22)]
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_performance_check_steps(df):
         return df[(df['STEP'] >= 23) & (df['STEP'] <= 33)]
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def feature_engineering(df):
         df['DRIVE POWER'] = (df['M1 SPEED'] * df['M1 TORQUE'] * np.pi / 30 /
                              1e3).astype(np.float32)
@@ -277,7 +272,6 @@ class Preprocessor:
 class ModelReader:
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def read_model(model, task='anomaly_detection', extension='.joblib'):
         if task == 'anomaly_detection':
             if 'Autoencoder' in model:
