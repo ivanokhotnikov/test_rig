@@ -6,7 +6,9 @@ from utils.plotters import Plotter
 from utils.config import (FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES,
                           PRESSURE_TEMPERATURE_FEATURES, TIME_STEPS)
 
-st.set_page_config(layout='wide')
+st.set_page_config(layout='wide',
+                   page_title='Anomaly detector',
+                   page_icon='fav.png')
 
 
 def main():
@@ -45,8 +47,8 @@ def main():
                             f'{algorithm}_{feature}_scaler')
                         scaled_data = scaler.transform(
                             df[feature].values.reshape(-1, 1))
-                        x = Preprocessor.create_sequences(scaled_data,
-                                             time_steps=TIME_STEPS)
+                        x = Preprocessor.create_sequences(
+                            scaled_data, time_steps=TIME_STEPS)
                         pred = detector.predict(x)
                         threshold = ModelReader.read_model_from_gcs(
                             f'{algorithm}_{feature}_threshold')

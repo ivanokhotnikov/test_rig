@@ -13,3 +13,4 @@ ml_step_predictor_build.py
 nn_forecaster_build.py
 tf_forecaster_build.py
 decomposer_build.py
+*.png

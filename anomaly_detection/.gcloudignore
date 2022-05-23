@@ -9,3 +9,4 @@ Dockerfile
 .dockerignore
 app.yaml
 Makefile
+*.png

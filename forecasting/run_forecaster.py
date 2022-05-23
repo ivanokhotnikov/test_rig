@@ -3,7 +3,9 @@ from utils.config import FORECAST_FEATURES, TIME_STEPS
 from utils.readers import DataReader, ModelReader, Preprocessor
 from utils.plotters import Plotter
 
-st.set_page_config(layout='wide')
+st.set_page_config(layout='wide',
+                   page_title='Forecasting',
+                   page_icon='fav.png')
 
 
 def main():
@@ -14,11 +16,12 @@ def main():
                                              show=False),
                         use_container_width=True)
     uploaded_file = st.file_uploader('Upload raw data file', type=['csv'])
-    window = int(st.number_input('Window size of moving average, seconds',
-                             value=3600,
-                             min_value=1,
-                             max_value=7200,
-                             step=1))
+    window = int(
+        st.number_input('Window size of moving average, seconds',
+                        value=3600,
+                        min_value=1,
+                        max_value=7200,
+                        step=1))
     if uploaded_file is not None:
         new_df = DataReader.read_newcoming_data(uploaded_file)
         new_df = Preprocessor.remove_step_zero(new_df)
