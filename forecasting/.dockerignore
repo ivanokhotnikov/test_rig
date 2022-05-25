@@ -28,7 +28,6 @@
 **/venv
 **/models
 **/data
-**/images
 README.md
 ml_forecaster_build.py
 ml_step_predictor_build.py

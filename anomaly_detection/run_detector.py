@@ -8,7 +8,7 @@ from utils.config import (FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES,
 
 st.set_page_config(layout='wide',
                    page_title='Anomaly detector',
-                   page_icon='fav.png')
+                   page_icon='images/fav.png')
 
 
 def main():
