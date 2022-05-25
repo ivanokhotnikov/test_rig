@@ -5,7 +5,8 @@ import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .config import ENGINEERED_FEATURES, IMAGES_PATH, FEATURES_NO_TIME_AND_COMMANDS, PRESSURE_TEMPERATURE, TIME_STEPS
+from .config import (ENGINEERED_FEATURES, IMAGES_PATH,
+                     FEATURES_NO_TIME_AND_COMMANDS, PRESSURE_TEMPERATURE)
 
 
 class Plotter:
@@ -17,12 +18,31 @@ class Plotter:
                       new=None,
                       plot_ma_all=False,
                       window=None,
+                      plot_each_unit=False,
                       show=False):
-        fig = go.Figure(
-            go.Scatter(x=list(historical.index),
-                       y=historical[feature].values.reshape(-1),
-                       name='Historical',
-                       line=dict(color='lightgray', width=1)))
+        fig = go.Figure()
+        if plot_each_unit:
+            for unit in historical['UNIT'].unique():
+                for test in historical[historical['UNIT'] ==
+                                       unit]['TEST'].unique():
+                    fig.add_scatter(
+                        x=list(
+                            historical[(historical['UNIT'] == unit)
+                                       & (historical['TEST'] == test)].index),
+                        y=historical[(historical['UNIT'] == unit)
+                                     & (historical['TEST'] == test)]
+                        [feature].values.reshape(-1),
+                        line=dict(width=1),
+                        opacity=0.2,
+                        name=f'{unit}-{test}',
+                        showlegend=False)
+        else:
+            fig.add_scatter(x=list(historical.index),
+                            y=historical[feature].values.reshape(-1),
+                            line=dict(width=1, color='lightgray'),
+                            opacity=0.2,
+                            name='Historical',
+                            showlegend=True)
         if new is not None:
             fig.add_scatter(x=list(
                 range(historical.index[-1],
