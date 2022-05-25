@@ -17,7 +17,7 @@ steps:
         "--image",
         "gcr.io/test-rig-349313/anomaly-detection",
         "--region",
-        "europe-west2",
+        "europe-west1",
         "--cpu",
         "4",
         "--memory",
