@@ -181,25 +181,33 @@ class DataReader:
                 return pd.DataFrame(cls.read_summary_data())
 
     @staticmethod
-    def read_newcoming_data(csv_file):
+    def check_if_in_bucket(csv_file):
         storage_client = storage.Client()
-        bucket = storage_client.get_bucket('test_rig_data')
+        try:
+            bucket = storage_client.get_bucket('test_rig_data')
+        except:
+            bucket = storage_client.get_bucket('rig_data')
         raw_folder_content = {
             blob.name[4:]
             for blob in list(bucket.list_blobs(prefix='raw'))
         }
-        if csv_file.name in raw_folder_content:
+        return bucket, csv_file.name in raw_folder_content
+
+    @classmethod
+    def read_newcoming_data(cls, csv_file):
+        bucket, in_bucket = cls.check_if_in_bucket(csv_file)
+        if in_bucket:
             st.write(f'{csv_file.name} in the GCS bucket {bucket.name}')
         else:
             st.write(f'{csv_file.name} not in the GCS bucket {bucket.name}')
             blob = bucket.blob(f'raw/{csv_file.name}')
-            blob.upload_from_file(csv_file)
+            blob.upload_from_file(csv_file, content_type='text/csv')
             st.write(
                 f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
-        df = pd.read_csv(csv_file,
+        blob = bucket.get_blob(f'raw/{csv_file.name}')
+        df = pd.read_csv(io.BytesIO(blob.download_as_bytes()),
                          usecols=FEATURES_FOR_ANOMALY_DETECTION,
-                         index_col=False,
-                         header=0)
+                         index_col=False)
         df[FEATURES_NO_TIME] = df[FEATURES_NO_TIME].apply(pd.to_numeric,
                                                           errors='coerce',
                                                           downcast='float')
@@ -211,6 +219,7 @@ class DataReader:
             unit = np.uint8(name_list[0].split('_')[0][-3:].lstrip('0D'))
         df['UNIT'] = unit
         df['STEP'] = df['STEP'].astype(np.uint8)
+        #TODO retesting case needs to be addressed
         df['TEST'] = np.uint8(1)
         return df
 

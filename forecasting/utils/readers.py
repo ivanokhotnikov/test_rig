@@ -19,13 +19,16 @@ from utils.config import (DATA_PATH, FEATURES_NO_TIME, FORECAST_FEATURES,
 class DataReader:
 
     @staticmethod
-    def get_processed_data_from_gcs(raw=False):
+    def get_processed_data_from_gcs(raw=True):
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('test_rig_data')
         if raw:
             final_df = pd.DataFrame()
             units = []
-            for blob in list(bucket.list_blobs(prefix='raw')):
+            loading_bar = st.progress(0)
+            for i, blob in enumerate(list(bucket.list_blobs(prefix='raw'))):
+                loading_bar.progress(
+                    i / len(list(bucket.list_blobs(prefix='raw'))))
                 data_bytes = blob.download_as_bytes()
                 current_df = None
                 try:
@@ -44,8 +47,7 @@ class DataReader:
                     print(f'Can\'t read {blob.name}')
                     continue
                 print(f'{blob.name} has been read')
-                if current_df is not None and len(
-                        current_df['STEP'].unique()) == 36:
+                if current_df is not None:
                     current_df[FEATURES_NO_TIME] = current_df[
                         FEATURES_NO_TIME].apply(pd.to_numeric,
                                                 errors='coerce',
@@ -153,7 +155,7 @@ class DataReader:
         return df
 
     @staticmethod
-    def read_newcoming_data(csv_file):
+    def check_if_in_bucket(csv_file):
         storage_client = storage.Client()
         try:
             bucket = storage_client.get_bucket('test_rig_data')
@@ -163,15 +165,21 @@ class DataReader:
             blob.name[4:]
             for blob in list(bucket.list_blobs(prefix='raw'))
         }
-        if csv_file.name in raw_folder_content:
+        return bucket, csv_file.name in raw_folder_content
+
+    @classmethod
+    def read_newcoming_data(cls, csv_file):
+        bucket, in_bucket = cls.check_if_in_bucket(csv_file)
+        if in_bucket:
             st.write(f'{csv_file.name} in the GCS bucket {bucket.name}')
         else:
             st.write(f'{csv_file.name} not in the GCS bucket {bucket.name}')
             blob = bucket.blob(f'raw/{csv_file.name}')
-            blob.upload_from_file(csv_file)
+            blob.upload_from_file(csv_file, content_type='text/csv')
             st.write(
                 f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
-        df = pd.read_csv(csv_file,
+        blob = bucket.get_blob(f'raw/{csv_file.name}')
+        df = pd.read_csv(io.BytesIO(blob.download_as_bytes()),
                          usecols=RAW_FORECAST_FEATURES,
                          index_col=False)
         df[FEATURES_NO_TIME] = df[FEATURES_NO_TIME].apply(pd.to_numeric,
@@ -347,17 +355,14 @@ class Preprocessor:
                        axis=0).reset_index(drop=True)
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_warm_up_steps(df):
         return df[(df['STEP'] >= 1) & (df['STEP'] <= 11)]
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_break_in_steps(df):
         return df[(df['STEP'] >= 12) & (df['STEP'] <= 22)]
 
     @staticmethod
-    @st.cache(allow_output_mutation=True, suppress_st_warning=True)
     def get_performance_check_steps(df):
         return df[(df['STEP'] >= 23) & (df['STEP'] <= 33)]
 
