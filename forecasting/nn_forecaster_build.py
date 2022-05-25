@@ -14,7 +14,7 @@ from utils.readers import DataReader, Preprocessor
 
 
 def main():
-    df = DataReader.get_processed_data_from_gcs(raw=False)
+    df = DataReader.get_processed_data_from_gcs(raw=True)
     trained_forecasters = []
     storage_client = storage.Client()
     forecasting_models_bucket = storage_client.get_bucket("models_forecasting")
@@ -26,8 +26,10 @@ def main():
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaled_train = scaler.fit_transform(train_data.values.reshape(-1, 1))
         blob = forecasting_models_bucket.blob(f'{model}_scaler.joblib')
-        blob.upload_from_filename(f'{model}_scaler.joblib')
         dump(scaler, os.path.join(MODELS_PATH, f'{model}_scaler.joblib'))
+        blob.upload_from_filename(os.path.join(MODELS_PATH,
+                                               f'{model}_scaler.joblib'),
+                                  content_type='application/joblib')
         scaled_test = scaler.transform(test_data.values.reshape(-1, 1))
         x_train, y_train = Preprocessor.create_sequences(scaled_train,
                                                          lookback=TIME_STEPS,
