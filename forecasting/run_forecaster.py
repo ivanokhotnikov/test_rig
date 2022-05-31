@@ -85,7 +85,6 @@ def main():
                                 use_container_width=True)
                 del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
                 gc.collect()
-                break
             gc.collect()
 
 
