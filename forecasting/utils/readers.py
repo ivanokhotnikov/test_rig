@@ -26,9 +26,10 @@ class DataReader:
             final_df = pd.DataFrame()
             units = []
             loading_bar = st.progress(0)
-            for i, blob in enumerate(list(bucket.list_blobs(prefix='raw'))):
+            for idx, blob in enumerate(list(bucket.list_blobs(prefix='raw')),
+                                       1):
                 loading_bar.progress(
-                    i / len(list(bucket.list_blobs(prefix='raw'))))
+                    idx / len(list(bucket.list_blobs(prefix='raw'))))
                 data_bytes = blob.download_as_bytes()
                 current_df = None
                 try:
@@ -93,6 +94,8 @@ class DataReader:
             final_df['RUNNING HOURS'] = (final_df['TOTAL SECONDS'] /
                                          3600).astype(np.float64)
             final_df = Preprocessor.feature_engineering(final_df)
+            bucket.blob('processed/forecast_data.csv').upload_from_string(
+                final_df.to_csv(index=False), content_type='text/csv')
             return final_df
         else:
             blob = bucket.get_blob('processed/forecast_data.csv')
