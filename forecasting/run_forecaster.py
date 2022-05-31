@@ -1,3 +1,4 @@
+import gc
 import streamlit as st
 from utils.config import FORECAST_FEATURES, TIME_STEPS
 from utils.readers import DataReader, ModelReader, Preprocessor
@@ -30,8 +31,8 @@ def main():
             new_df = Preprocessor.feature_engineering(new_df)
             st.write('Forecast on the new data')
             forecast_bar = st.progress(0)
-            for feature in FORECAST_FEATURES:
-                forecast_bar.progress(i / len(FORECAST_FEATURES))
+            for idx, feature in enumerate(FORECAST_FEATURES, 1):
+                forecast_bar.progress(idx / len(FORECAST_FEATURES))
                 scaler = ModelReader.read_model_from_gcs(
                     f'RNN_{feature}_scaler')
                 forecaster = ModelReader.read_model_from_gcs(f'RNN_{feature}')
@@ -49,6 +50,8 @@ def main():
                                                       window=window,
                                                       show=False),
                                 use_container_width=True)
+                del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
+                gc.collect()
     else:
         with st.expander('Show current forecast'):
             plot_each_unit = st.checkbox('Plot each unit', value=False)
@@ -59,8 +62,8 @@ def main():
                                 max_value=7200,
                                 step=1))
             forecast_bar = st.progress(0)
-            for i, feature in enumerate(FORECAST_FEATURES):
-                forecast_bar.progress(i / len(FORECAST_FEATURES))
+            for idx, feature in enumerate(FORECAST_FEATURES, 1):
+                forecast_bar.progress(idx / len(FORECAST_FEATURES))
                 scaler = ModelReader.read_model_from_gcs(
                     f'RNN_{feature}_scaler')
                 forecaster = ModelReader.read_model_from_gcs(f'RNN_{feature}')
@@ -70,15 +73,20 @@ def main():
                     scaled_data, lookback=TIME_STEPS, inference=True)
                 current_forecast = forecaster.predict(sequenced_scaled_data)
                 current_forecast = scaler.inverse_transform(current_forecast)
-                st.plotly_chart(Plotter.plot_forecast(df,
-                                                      current_forecast,
-                                                      feature,
-                                                      new=None,
-                                                      plot_ma_all=True,
-                                                      window=window,
-                                                      plot_each_unit=plot_each_unit,
-                                                      show=False),
+                st.plotly_chart(Plotter.plot_forecast(
+                    df,
+                    current_forecast,
+                    feature,
+                    new=None,
+                    plot_ma_all=True,
+                    window=window,
+                    plot_each_unit=plot_each_unit,
+                    show=False),
                                 use_container_width=True)
+                del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
+                gc.collect()
+                break
+            gc.collect()
 
 
 if __name__ == '__main__':
