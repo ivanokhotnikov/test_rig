@@ -1,4 +1,5 @@
 import os
+import gc
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -12,23 +13,24 @@ from .config import (ENGINEERED_FEATURES, IMAGES_PATH,
 class Plotter:
 
     @staticmethod
-    def plot_forecast(historical,
-                      forecast,
-                      feature,
+    def plot_forecast(historical: pd.DataFrame,
+                      forecast: np.ndarray,
+                      feature: str,
                       new=None,
                       plot_ma_all=False,
                       window=None,
                       plot_each_unit=False,
-                      show=False):
+                      show=False) -> go.Figure | None:
         fig = go.Figure()
         if plot_each_unit:
             for unit in historical['UNIT'].unique():
                 for test in historical[historical['UNIT'] ==
                                        unit]['TEST'].unique():
                     fig.add_scatter(
-                        x=list(
-                            historical[(historical['UNIT'] == unit)
-                                       & (historical['TEST'] == test)].index),
+                        x=np.array(
+                            (historical[(historical['UNIT'] == unit)
+                                        & (historical['TEST'] == test)].index))
+                        / 3600,
                         y=historical[(historical['UNIT'] == unit)
                                      & (historical['TEST'] == test)]
                         [feature].values.reshape(-1),
@@ -37,29 +39,27 @@ class Plotter:
                         name=f'{unit}-{test}',
                         showlegend=False)
         else:
-            fig.add_scatter(x=list(historical.index),
+            fig.add_scatter(x=np.arange(len(historical)) / 3600,
                             y=historical[feature].values.reshape(-1),
                             line=dict(width=1, color='lightgray'),
                             opacity=0.2,
                             name='Historical',
                             showlegend=True)
         if new is not None:
-            fig.add_scatter(x=list(
-                range(historical.index[-1],
-                      historical.index[-1] + len(new) + 1)),
+            fig.add_scatter(x=np.arange(len(historical),
+                                        len(historical) + len(new) + 1) / 3600,
                             y=new[feature].values.reshape(-1),
                             name='New data',
                             line=dict(color='steelblue', width=1.25))
-            fig.add_scatter(x=list(
-                range(historical.index[-1] + len(new),
-                      historical.index[-1] + len(new) + len(forecast) + 1)),
+            fig.add_scatter(x=np.arange(
+                len(historical) + len(new),
+                len(historical) + len(new) + len(forecast) + 1) / 3600,
                             y=forecast.reshape(-1),
                             name='Forecast',
                             line=dict(color='indianred', width=1.25))
             if plot_ma_all and window:
-                fig.add_scatter(x=list(
-                    range(historical.index[-1] + len(new) + len(forecast) +
-                          1)),
+                fig.add_scatter(x=np.arange(
+                    len(historical) + len(new) + len(forecast) + 1) / 3600,
                                 y=pd.Series(
                                     np.concatenate(
                                         (historical[feature].values,
@@ -68,16 +68,16 @@ class Plotter:
                                          ))).rolling(window).mean().values,
                                 name='Moving average trend',
                                 line=dict(color='orange', width=1.5))
-        elif new is None:
-            fig.add_scatter(x=list(
-                range(historical.index[-1],
-                      historical.index[-1] + len(forecast) + 1)),
+        else:
+            fig.add_scatter(x=np.arange(len(historical),
+                                        len(historical) + len(forecast) + 1) /
+                            3600,
                             y=forecast.reshape(-1),
                             name='Current forecast',
                             line=dict(color='indianred', width=1.25))
             if plot_ma_all and window:
                 fig.add_scatter(
-                    x=list(range(historical.index[-1] + len(forecast) + 1)),
+                    x=np.arange(len(historical) + len(forecast) + 1) / 3600,
                     y=pd.Series(
                         np.concatenate(
                             (historical[feature].values, forecast.reshape(-1)
@@ -86,7 +86,7 @@ class Plotter:
                     line=dict(color='orange', width=1.5))
 
         fig.update_layout(template='none',
-                          xaxis_title='Total running time, seconds',
+                          xaxis=dict(title='Total running time, hours'),
                           yaxis_title=feature,
                           title=f'{feature} forecast',
                           legend=dict(orientation='h',
@@ -101,7 +101,11 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_ma_trend(df, feature, window, show=False, ma_df=None):
+    def plot_ma_trend(df: pd.DataFrame,
+                      feature: str,
+                      window: int,
+                      show=False,
+                      ma_df=None):
         fig = go.Figure()
         fig.add_scatter(x=df['TIME'],
                         y=df[feature],
