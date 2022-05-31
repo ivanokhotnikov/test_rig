@@ -50,7 +50,7 @@ def main():
                                                       window=window,
                                                       show=False),
                                 use_container_width=True)
-                del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
+                del scaler, scaled_new_data, sequenced_scaled_new_data, forecaster, current_forecast
                 gc.collect()
     else:
         with st.expander('Show current forecast'):
