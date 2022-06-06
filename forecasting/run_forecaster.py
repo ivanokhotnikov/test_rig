@@ -1,12 +1,16 @@
 import gc
+import os
+
 import streamlit as st
+
 from utils.config import FORECAST_FEATURES, TIME_STEPS
-from utils.readers import DataReader, ModelReader, Preprocessor
 from utils.plotters import Plotter
+from utils.readers import DataReader, ModelReader, Preprocessor
 
 st.set_page_config(layout='wide',
                    page_title='Forecasting',
-                   page_icon='images/fav.png')
+                   page_icon=os.path.join(os.path.dirname(__file__), 'images','fav.png'))
+PROTO = False
 
 
 def main():
@@ -52,6 +56,7 @@ def main():
                                 use_container_width=True)
                 del scaler, scaled_new_data, sequenced_scaled_new_data, forecaster, current_forecast
                 gc.collect()
+                if PROTO: break
     else:
         with st.expander('Show current forecast'):
             plot_each_unit = st.checkbox('Plot each unit', value=False)
@@ -85,6 +90,7 @@ def main():
                                 use_container_width=True)
                 del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
                 gc.collect()
+                if PROTO: break
             gc.collect()
 
 

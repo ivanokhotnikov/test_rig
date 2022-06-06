@@ -1,14 +1,16 @@
+import os
+
 import numpy as np
 import streamlit as st
 
-from utils.readers import DataReader, Preprocessor, ModelReader
-from utils.plotters import Plotter
-from utils.config import (FEATURES_FOR_ANOMALY_DETECTION, ENGINEERED_FEATURES,
+from utils.config import (ENGINEERED_FEATURES, FEATURES_FOR_ANOMALY_DETECTION,
                           PRESSURE_TEMPERATURE_FEATURES, TIME_STEPS)
+from utils.plotters import Plotter
+from utils.readers import DataReader, ModelReader, Preprocessor
 
 st.set_page_config(layout='wide',
                    page_title='Anomaly detector',
-                   page_icon='images/fav.png')
+                   page_icon=os.path.join(os.path.dirname(__file__), 'images','fav.png'))
 
 
 def main():
@@ -21,7 +23,9 @@ def main():
         col1, col2 = st.columns(2)
         with col1:
             if st.button('Plot raw data'):
-                for feature in FEATURES_FOR_ANOMALY_DETECTION:
+                plotting_bar = st.progress(0)
+                for idx, feature in enumerate(FEATURES_FOR_ANOMALY_DETECTION, 1):
+                    plotting_bar.progress(idx / len(FEATURES_FOR_ANOMALY_DETECTION))
                     if 'TIME' not in feature:
                         st.plotly_chart(
                             Plotter.plot_unit_per_test_feature(
@@ -39,7 +43,13 @@ def main():
                 'References on isolation forest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html, local outlier factor: https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.LocalOutlierFactor.html, convolutional autoencoder: https://keras.io/examples/timeseries/timeseries_anomaly_detection/',
                 index=0)
             if algorithm is not None:
-                for feature in ENGINEERED_FEATURES + PRESSURE_TEMPERATURE_FEATURES:
+                detecting_bar = st.progress(0)
+                for idx, feature in enumerate(
+                        ENGINEERED_FEATURES + PRESSURE_TEMPERATURE_FEATURES,
+                        1):
+                    detecting_bar.progress(idx /
+                                          len(ENGINEERED_FEATURES +
+                                              PRESSURE_TEMPERATURE_FEATURES))
                     detector = ModelReader.read_model_from_gcs(
                         f'{algorithm}_{feature}')
                     if algorithm == 'ConvolutionalAutoencoder':

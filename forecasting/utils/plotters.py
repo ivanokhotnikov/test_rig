@@ -41,7 +41,7 @@ class Plotter:
         else:
             fig.add_scatter(x=np.arange(len(historical)) / 3600,
                             y=historical[feature].values.reshape(-1),
-                            line=dict(width=1, color='lightgray'),
+                            line=dict(width=1, color='gray'),
                             opacity=0.2,
                             name='Historical',
                             showlegend=True)
