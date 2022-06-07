@@ -1,5 +1,4 @@
 import os
-import gc
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -20,7 +19,7 @@ class Plotter:
                       plot_ma_all=False,
                       window=None,
                       plot_each_unit=False,
-                      show=False) -> go.Figure | None:
+                      show=False):
         fig = go.Figure()
         if plot_each_unit:
             for unit in historical['UNIT'].unique():
