@@ -1,12 +1,14 @@
 import os
+from typing import Optional, List
+
 import numpy as np
 import pandas as pd
-import streamlit as st
 import plotly.graph_objects as go
+import streamlit as st
 from plotly.subplots import make_subplots
 
-from .config import (ENGINEERED_FEATURES, IMAGES_PATH,
-                     FEATURES_NO_TIME_AND_COMMANDS, PRESSURE_TEMPERATURE)
+from .config import (ENGINEERED_FEATURES, FEATURES_NO_TIME_AND_COMMANDS,
+                     IMAGES_PATH, PRESSURE_TEMPERATURE)
 
 
 class Plotter:
@@ -15,11 +17,11 @@ class Plotter:
     def plot_forecast(historical: pd.DataFrame,
                       forecast: np.ndarray,
                       feature: str,
-                      new=None,
-                      plot_ma_all=False,
-                      window=None,
-                      plot_each_unit=False,
-                      show=False):
+                      window: Optional[int] = None,
+                      new: Optional[pd.DataFrame] = None,
+                      plot_ma_all: Optional[bool] = False,
+                      plot_each_unit: Optional[bool] = False,
+                      show: Optional[bool] = False) -> Optional[go.Figure]:
         fig = go.Figure()
         if plot_each_unit:
             for unit in historical['UNIT'].unique():
@@ -100,11 +102,12 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_ma_trend(df: pd.DataFrame,
-                      feature: str,
-                      window: int,
-                      show=False,
-                      ma_df=None):
+    def plot_ma_trend(
+            df: pd.DataFrame,
+            feature: str,
+            window: int,
+            show: Optional[bool] = False,
+            ma_df: Optional[pd.DataFrame] = None) -> Optional[go.Figure]:
         fig = go.Figure()
         fig.add_scatter(x=df['TIME'],
                         y=df[feature],
@@ -135,7 +138,9 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_heatmap(df, features, show=False):
+    def plot_cov_matrix(df: pd.DataFrame,
+                        features: List[str],
+                        show: Optional[bool] = False) -> Optional[go.Figure]:
         fig = go.Figure(
             go.Heatmap(x=features,
                        y=features,
@@ -147,7 +152,7 @@ class Plotter:
         return fig
 
     @staticmethod
-    def plot_unit_from_summary_file(unit_id='HYD000091-R1'):
+    def plot_unit_from_summary_file(unit_id: str = 'HYD000091-R1') -> None:
         from readers import DataReader
 
         reader = DataReader()
@@ -175,7 +180,10 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_unit(df, unit=89, save=False, show=True):
+    def plot_unit(df: pd.DataFrame,
+                  unit: int = 89,
+                  save: Optional[bool] = False,
+                  show: Optional[bool] = True) -> None:
         for feature in FEATURES_NO_TIME_AND_COMMANDS:
             fig = go.Figure()
             for test in df[df['UNIT'] == unit]['TEST'].unique():
@@ -196,11 +204,11 @@ class Plotter:
             if show: fig.show()
 
     @staticmethod
-    def plot_unit_per_feature(df,
-                              unit=89,
-                              feature='M4 ANGLE',
-                              save=False,
-                              show=True):
+    def plot_unit_per_feature(df: pd.DataFrame,
+                              unit: int = 89,
+                              feature: str = 'M4 ANGLE',
+                              save: Optional[bool] = False,
+                              show: Optional[bool] = True) -> None:
         for test in df[(df['UNIT'] == unit)]['TEST'].unique():
             Plotter.plot_unit_per_test_feature(df,
                                                unit=unit,
@@ -210,12 +218,13 @@ class Plotter:
                                                show=show)
 
     @staticmethod
-    def plot_unit_per_test_feature(df,
-                                   unit=89,
-                                   test=1,
-                                   feature='M4 ANGLE',
-                                   save=False,
-                                   show=True):
+    def plot_unit_per_test_feature(
+            df: pd.DataFrame,
+            unit: int = 89,
+            test: int = 1,
+            feature: str = 'M4 ANGLE',
+            save: Optional[bool] = False,
+            show: Optional[bool] = True) -> Optional[go.Figure]:
         fig = go.Figure()
         fig.add_scatter(x=df[(df['UNIT'] == unit)
                              & (df['TEST'] == test)]['TIME'],
@@ -238,13 +247,14 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_unit_per_test_step_feature(df,
-                                        unit=89,
-                                        test=1,
-                                        step=23,
-                                        feature='M4 ANGLE',
-                                        save=False,
-                                        show=True):
+    def plot_unit_per_test_step_feature(
+            df: pd.DataFrame,
+            unit: int = 89,
+            test: int = 1,
+            step: int = 23,
+            feature: str = 'M4 ANGLE',
+            save: Optional[bool] = False,
+            show: Optional[bool] = True) -> Optional[go.Figure]:
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(x=df[(df['UNIT'] == unit)
@@ -269,10 +279,10 @@ class Plotter:
         return fig
 
     @staticmethod
-    def plot_all_per_step_feature(df,
-                                  step=18,
-                                  feature='M4 ANGLE',
-                                  single_plot=True):
+    def plot_all_per_step_feature(df: pd.DataFrame,
+                                  step: int = 18,
+                                  feature: str = 'M4 ANGLE',
+                                  single_plot: Optional[bool] = True) -> None:
         if single_plot:
             fig = go.Figure()
             for unit in df['UNIT'].unique():
@@ -317,7 +327,7 @@ class Plotter:
         fig.show()
 
     @staticmethod
-    def plot_all_per_step(df, step):
+    def plot_all_per_step(df: pd.DataFrame, step: int) -> None:
         for feature in FEATURES_NO_TIME_AND_COMMANDS:
             fig = go.Figure()
             for unit in df['UNIT'].unique():
@@ -334,7 +344,7 @@ class Plotter:
             fig.show()
 
     @staticmethod
-    def plot_all_means_per_step(df, step):
+    def plot_all_means_per_step(df: pd.DataFrame, step: int) -> None:
         units = []
         features_means = {
             feature: []
@@ -359,7 +369,7 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_anomalies_per_unit(df, unit=89):
+    def plot_anomalies_per_unit(df: pd.DataFrame, unit: int = 89) -> None:
         for test in df[(df['UNIT'] == unit)]['TEST'].unique():
             for feature in ENGINEERED_FEATURES + PRESSURE_TEMPERATURE:
                 Plotter.plot_anomalies_per_unit_test_feature(df,
@@ -369,7 +379,10 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_anomalies_per_unit_feature(df, unit=89, feature='PT4', show=True):
+    def plot_anomalies_per_unit_feature(df: pd.DataFrame,
+                                        unit: int = 89,
+                                        feature: str = 'PT4',
+                                        show: Optional[bool] = True) -> None:
         for test in df[(df['UNIT'] == unit)]['TEST'].unique():
             Plotter.plot_anomalies_per_unit_test_feature(df,
                                                          unit=unit,
@@ -379,11 +392,12 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_anomalies_per_unit_test_feature(df,
-                                             unit=89,
-                                             test=1,
-                                             feature='M4 ANGLE',
-                                             show=True):
+    def plot_anomalies_per_unit_test_feature(
+            df: pd.DataFrame,
+            unit: int = 89,
+            test: int = 1,
+            feature: str = 'M4 ANGLE',
+            show: Optional[bool] = True) -> Optional[go.Figure]:
         if any(df[(df['UNIT'] == unit)
                   & (df['TEST'] == test)][f'ANOMALY_{feature}'] == -1):
             fig = go.Figure()
@@ -420,12 +434,13 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_anomalies_per_unit_test_step_feature(df,
-                                                  unit=89,
-                                                  test=1,
-                                                  step=23,
-                                                  feature='M4 ANGLE',
-                                                  show=False):
+    def plot_anomalies_per_unit_test_step_feature(
+            df: pd.DataFrame,
+            unit: int = 89,
+            test: int = 1,
+            step: int = 23,
+            feature: str = 'M4 ANGLE',
+            show: Optional[bool] = False) -> Optional[go.Figure]:
         try:
             if any(df[(df['UNIT'] == unit)
                       & (df['TEST'] == test)
@@ -464,7 +479,9 @@ class Plotter:
 
     @staticmethod
     @st.cache(allow_output_mutation=True, suppress_st_warning=True)
-    def plot_all_running_features(df, show=True):
+    def plot_all_running_features(
+            df: pd.DataFrame,
+            show: Optional[bool] = True) -> Optional[go.Figure]:
         for feature in FEATURES_NO_TIME_AND_COMMANDS:
             fig = go.Figure()
             fig.add_scatter(x=df['RUNNING TIME'], y=df[feature])
@@ -479,8 +496,9 @@ class Plotter:
 
 if __name__ == '__main__':
     import pandas as pd
-    from readers import DataReader, Preprocessor
+
     from config import PREDICTIONS_PATH
+    from readers import DataReader, Preprocessor
 
     print(os.getcwd())
     os.chdir('..\\..\\..')

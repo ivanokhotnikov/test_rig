@@ -18,7 +18,7 @@ def main():
     raw = st.checkbox('Read raw data', value=False)
     df = DataReader.get_processed_data_from_gcs(raw=raw)
     with st.expander('Plot heatmap of features'):
-        st.plotly_chart(Plotter.plot_heatmap(df, FORECAST_FEATURES,
+        st.plotly_chart(Plotter.plot_cov_matrix(df, FORECAST_FEATURES,
                                              show=False),
                         use_container_width=True)
     uploaded_file = st.file_uploader('Upload raw data file', type=['csv'])
