@@ -1,4 +1,3 @@
-import gc
 import os
 
 import streamlit as st
@@ -54,8 +53,6 @@ def main():
                                                       window=window,
                                                       show=False),
                                 use_container_width=True)
-                del scaler, scaled_new_data, sequenced_scaled_new_data, forecaster, current_forecast
-                gc.collect()
                 if PROTO: break
     else:
         with st.expander('Show current forecast'):
@@ -88,10 +85,7 @@ def main():
                     plot_each_unit=plot_each_unit,
                     show=False),
                                 use_container_width=True)
-                del scaler, scaled_data, sequenced_scaled_data, forecaster, current_forecast
-                gc.collect()
                 if PROTO: break
-            gc.collect()
 
 
 if __name__ == '__main__':

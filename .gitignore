@@ -3,6 +3,7 @@ __pycache__*
 .devcontainer
 .gitignore
 *data
+*venv
 *.streamlit
 anomaly_detection/models*
 anomaly_detection/venv*
