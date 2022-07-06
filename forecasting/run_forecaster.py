@@ -9,7 +9,7 @@ from utils.readers import DataReader, ModelReader, Preprocessor
 st.set_page_config(layout='wide',
                    page_title='Forecasting',
                    page_icon=os.path.join(os.path.dirname(__file__), 'images','fav.png'))
-DEV = True
+DEV = False
 
 
 def main():
