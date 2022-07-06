@@ -9,7 +9,7 @@ from utils.readers import DataReader, ModelReader, Preprocessor
 st.set_page_config(layout='wide',
                    page_title='Forecasting',
                    page_icon=os.path.join(os.path.dirname(__file__), 'images','fav.png'))
-PROTO = False
+DEV = True
 
 
 def main():
@@ -53,10 +53,10 @@ def main():
                                                       window=window,
                                                       show=False),
                                 use_container_width=True)
-                if PROTO: break
+                if DEV: break
     else:
         with st.expander('Show current forecast'):
-            plot_each_unit = st.checkbox('Plot each unit', value=False)
+            plot_each_unit = st.checkbox('Plot each unit', value=True)
             window = int(
                 st.number_input('Window size of moving average, seconds',
                                 value=3600,
@@ -85,7 +85,7 @@ def main():
                     plot_each_unit=plot_each_unit,
                     show=False),
                                 use_container_width=True)
-                if PROTO: break
+                if DEV: break
 
 
 if __name__ == '__main__':

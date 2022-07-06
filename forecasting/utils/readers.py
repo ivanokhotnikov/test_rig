@@ -181,6 +181,12 @@ class DataReader:
             blob.upload_from_file(csv_file, content_type='text/csv')
             st.write(
                 f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
+            updated_df = cls.get_processed_data_from_gcs(raw=True)
+            blob = bucket.blob('processed/forecast_data.csv')
+            blob.upload_from_string(updated_df.to_csv(index=False),
+                                    content_type='text/csv')
+            st.write(
+                f'{csv_file.name} uploaded to the GCS bucket {bucket.name}')
         blob = bucket.get_blob(f'raw/{csv_file.name}')
         df = pd.read_csv(io.BytesIO(blob.download_as_bytes()),
                          usecols=RAW_FORECAST_FEATURES,
